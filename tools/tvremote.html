@@ -94,7 +94,7 @@ details .in{padding:0 18px 18px}
       <p class="sub">Screen Hub · Samsung TVs on this network</p>
     </div>
     <div class="pill-row">
-      <button class="pill pill-version" id="verBtn" aria-expanded="false" title="View changelog">v1.1.0</button>
+      <button class="pill pill-version" id="verBtn" aria-expanded="false" title="View changelog">v1.2.0</button>
       <button class="pill pill-refresh" id="refBtn" aria-expanded="false" title="View data sources">Checking…</button>
       <div class="pop" id="verPop" role="dialog" aria-label="Changelog"></div>
       <div class="pop" id="refPop" role="dialog" aria-label="Data sources"></div>
@@ -218,7 +218,7 @@ details .in{padding:0 18px 18px}
       <label for="aMac">MAC address for switching on (optional, filled in automatically when the TV is on)</label>
       <input id="aMac" class="mono" placeholder="AA:BB:CC:DD:EE:FF">
       <div class="row" style="margin-top:10px"><button class="b" id="addBtn">Save TV</button><button class="b" id="defBtn">Make selected the default</button><button class="b" id="rmBtn">Forget selected</button></div>
-      <div class="row" style="margin-top:10px"><button class="b" id="quitBtn">Stop TV Remote</button></div>
+      <div class="row" style="margin-top:10px"><button class="b" id="diagBtn" data-act="diagnose">Run diagnostics</button><button class="b" id="quitBtn">Stop TV Remote</button></div>
       <div id="tvTable" class="mono" style="margin-top:12px; color:var(--muted)"></div>
     </div>
   </details>
@@ -241,6 +241,7 @@ details .in{padding:0 18px 18px}
 (function(){
   "use strict";
   var CHANGELOG = [
+    { v:"1.2.0", d:"22 Oct 2026", t:"Diagnostics: a Run diagnostics button checks every way of reaching the TV and saves the answers to tvremote-diagnostics.txt. Every action is also logged to tvremote.log." },
     { v:"1.1.0", d:"22 Oct 2026", t:"Click to open: double-click TV Remote.cmd (or its desktop shortcut) to start the tool and open this page; opening it again reuses the running copy. Stop button under Screens and settings." },
     { v:"1.0.0", d:"22 Oct 2026", t:"First release: power on/off, open Screen Hub, playlist and volume controls, Show now (message, YouTube, website, clock), remote keys, app list, find and save TVs." }
   ];

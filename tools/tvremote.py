@@ -19,6 +19,7 @@ No extra packages: standard-library Python 3.8+ only (Windows, macOS or Linux).
     python tvremote.py resume               end a live item and carry on with the playlist
     python tvremote.py reload               reload the Screen Hub player
     python tvremote.py apps                 list apps installed on the TV
+    python tvremote.py diagnose             check the connection and save tvremote-diagnostics.txt
     python tvremote.py key KEY_VOLUP KEY_VOLUP   send raw remote keys
 
 Add --tv NAME (or --tv all) to pick a screen; otherwise the default TV is used.
@@ -30,7 +31,7 @@ import argparse, base64, json, os, socket, ssl, struct, sys, threading, time, uu
 import urllib.request, urllib.error, ipaddress, webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 APP_ID = "RScreenHub.ScreenHub"           # loader/config.xml tizen:application id
 YOUTUBE_APP = "111299001912"
 REMOTE_NAME = "Screen Hub Remote"
@@ -504,14 +505,90 @@ def run(conf, name, action, a):
     raise TVError("Unknown action %r" % action)
 
 
+LOG_PATH = os.path.join(HERE, "tvremote.log")
+
+
+def log_line(text):
+    try:
+        if os.path.exists(LOG_PATH) and os.path.getsize(LOG_PATH) > 200000:
+            os.replace(LOG_PATH, LOG_PATH + ".old")
+        with open(LOG_PATH, "a", encoding="utf-8") as f:
+            f.write(time.strftime("%Y-%m-%d %H:%M:%S ") + text.replace("\n", " | ") + "\n")
+    except OSError:
+        pass
+
+
+def diagnose(conf, name):
+    """Try every way of reaching the TV and write what it answered to tvremote-diagnostics.txt."""
+    tv = conf["tvs"][name]
+    ip = tv["ip"]
+    out = ["Screen Hub TV Remote %s diagnostics, %s" % (VERSION, time.strftime("%Y-%m-%d %H:%M:%S")),
+           "Python %s on %s; this PC %s" % (sys.version.split()[0], sys.platform, local_ip()),
+           "TV %s: ip %s, saved port %s, allowed %s, token %s, mac %s" % (
+               name, ip, tv.get("port"), tv.get("allowed"), "yes" if tv.get("token") else "no", tv.get("mac") or "none"), ""]
+    for port in (8001, 8002, 55000, 9197, 7676):
+        try:
+            c = socket.create_connection((ip, port), timeout=2)
+            c.close()
+            out.append("port %-5d open" % port)
+        except OSError as e:
+            out.append("port %-5d closed (%s)" % (port, e))
+    for path in ("/api/v2/", "/api/v2/applications/" + APP_ID, "/api/v2/applications/" + YOUTUBE_APP):
+        try:
+            with urllib.request.urlopen("http://%s:8001%s" % (ip, path), timeout=4) as r:
+                out.append("\nGET %s -> %s\n%s" % (path, r.status, r.read(3000).decode("utf-8", "replace")))
+        except urllib.error.HTTPError as e:
+            out.append("\nGET %s -> HTTP %s %s" % (path, e.code, e.read(500).decode("utf-8", "replace")))
+        except Exception as e:
+            out.append("\nGET %s -> %s" % (path, e))
+    nm = base64.b64encode(REMOTE_NAME.encode()).decode()
+    for port, secure, path in ((8001, False, "/api/v2/channels/samsung.remote.control?name=" + nm),
+                               (8002, True, "/api/v2/channels/samsung.remote.control?name=" + nm + ("&token=" + tv["token"] if tv.get("token") else "")),
+                               (8001, False, "/api/v2/channels/samsung.remote.control")):
+        out.append("\nWebSocket %s://%s:%d%s" % ("wss" if secure else "ws", ip, port, path))
+        try:
+            ws = WS(ip, port, path, secure)
+        except Exception as e:
+            out.append("  connect failed: %r" % e)
+            continue
+        out.append("  connected; waiting 12s for messages (press Allow on the TV if asked)")
+        end = time.time() + 12
+        try:
+            while time.time() < end:
+                try:
+                    msg = ws.recv(end - time.time())
+                except socket.timeout:
+                    break
+                out.append("  <- " + json.dumps(msg)[:600])
+                if msg.get("event") == "ms.channel.connect":
+                    ws.send({"method": "ms.remote.control", "params": {"Cmd": "Click", "DataOfCmd": "KEY_INFO", "Option": "false", "TypeOfRemote": "SendRemoteKey"}})
+                    out.append("  -> sent KEY_INFO (the TV's info banner or Screen Hub's status panel should appear)")
+                    ws.send({"method": "ms.channel.emit", "params": {"event": "ed.installedApp.get", "to": "host", "data": ""}})
+                    out.append("  -> asked for the app list")
+                    end = min(end, time.time() + 5)
+        except Exception as e:
+            out.append("  error: %r" % e)
+        ws.close()
+        out.append("  done")
+    text = "\n".join(out) + "\n"
+    path = os.path.join(HERE, "tvremote-diagnostics.txt")
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(text)
+    return "%s: diagnostics saved to %s" % (tv.get("label") or name, path)
+
+
 def run_many(conf, names, action, a):
     results = [None] * len(names)
 
     def one(i, n):
         try:
-            results[i] = {"tv": n, "ok": True, "msg": run(conf, n, action, a)}
+            msg = diagnose(conf, n) if action == "diagnose" else run(conf, n, action, a)
+            results[i] = {"tv": n, "ok": True, "msg": msg}
+            if action != "diagnose":
+                log_line("ok   %s %s %s" % (n, action, msg if isinstance(msg, str) else "%d items" % len(msg)))
         except Exception as e:  # report per TV, keep going with the rest
             results[i] = {"tv": n, "ok": False, "msg": str(e)}
+            log_line("FAIL %s %s %r" % (n, action, e))
     ts = [threading.Thread(target=one, args=(i, n)) for i, n in enumerate(names)]
     for t in ts:
         t.start()
@@ -696,6 +773,7 @@ def main(argv=None):
     sub.add_parser("list", help="list saved TVs")
     p = sub.add_parser("ui", help="open the control page"); p.add_argument("--port", type=int, default=8765); p.add_argument("--no-browser", action="store_true")
     sub.add_parser("status", help="power state")
+    sub.add_parser("diagnose", help="check the connection and save tvremote-diagnostics.txt")
     p = sub.add_parser("on", help="switch on (Wake-on-LAN)"); p.add_argument("--open", action="store_true", help="then start Screen Hub")
     sub.add_parser("off", help="switch off")
     sub.add_parser("open", help="start Screen Hub")

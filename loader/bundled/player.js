@@ -20,6 +20,7 @@
   var sjcl = window.sjcl;
 
   var CHANGELOG = [
+    { v: "1.2.2", d: "22 Oct 2026", t: "Never a black screen: a Starting up card shows straight away, and if the player can't get going within 25 seconds the TV shows a report of what went wrong (version, browser and any errors) instead of staying dark." },
     { v: "1.2.1", d: "22 Oct 2026", t: "Fix: some TVs showed a blank screen instead of the pairing card. The card now always shows first with the Screen ID and code; the QR code is added on top only if the TV can draw it, as a plain image." },
     { v: "1.2.0", d: "22 Oct 2026", t: "Pairing by QR code: the pairing card shows a QR code to scan from the Screen Hub console on a phone. The Screen ID and code are still shown underneath for typing in." },
     { v: "1.1.0", d: "22 Oct 2026", t: "Time check: a full-screen clock on the hour and half hour for 15 seconds, skipped while someone is using the remote. On by default; switch per screen in the console." },
@@ -546,7 +547,8 @@
   function showLock() {
     stopAll();
     var el = $("lock");
-    if (access === "blocked") el.innerHTML = card("This screen has been switched off", "Switch it back on in the Screen Hub console. It checks again every few minutes.", false);
+    if (access === "checking") el.innerHTML = card("Starting up", "Checking for this screen's content. This takes a few seconds.", false);
+    else if (access === "blocked") el.innerHTML = card("This screen has been switched off", "Switch it back on in the Screen Hub console. It checks again every few minutes.", false);
     else if (access === "offline") el.innerHTML = card("Can't reach the internet", "Screen Hub will keep trying. Check the TV's network connection.", false);
     else {
       // text card first, so the Screen ID and code are always on screen whatever happens next
@@ -772,6 +774,8 @@
     if (d.getSeconds() === 0 && d.getMinutes() % 2 === 0) { try { moveCard(); moveCard2(); } catch (e) {} }
     if ($("idle").className === "on" && d.getSeconds() % 15 === 0 && eligibleList().length) advance(1, true);
     if ($("info").className === "on" && d.getSeconds() % 2 === 0) renderInfo();
+    var G = window.RS_GUARD;
+    if (G && !G.done && access !== "checking" && ($("lock").className === "on" || current || $("idle").className === "on" || nightOn || chimeOn)) G.ok();
   }
 
   // ---------- remote player updates ----------
@@ -781,17 +785,20 @@
   }
 
   // ---------- start ----------
+  function guardErr(where, e) { lastError = where + ": " + (e && e.message || e); if (window.RS_GUARD) window.RS_GUARD.add(lastError); }
   function start() {
     window.RS_ALIVE = true;
     layers = [$("layerA"), $("layerB")];
-    placeStage();
-    registerKeys();
+    try { placeStage(); } catch (e) { guardErr("stage", e); }
+    try { registerKeys(); } catch (e) { guardErr("keys", e); }
+    try { showLock(); } catch (e) { guardErr("starting card", e); }
     if (!sjcl) { document.body.innerHTML = "<p style='color:#fff;font-size:40px;padding:80px'>Screen Hub couldn't load its decryption library.</p>"; return; }
     resolveId(function () {
-      checkConfig();
+      try { showLock(); } catch (e) { guardErr("starting card", e); }
+      try { checkConfig(); } catch (e) { guardErr("config check", e); }
       var lastCfg = now(), lastUpd = now();
       setInterval(function () {
-        tick();
+        try { tick(); } catch (e) { guardErr("tick", e); }
         var t = now();
         if (t - lastCfg >= S.checkMinutes * 60000) { lastCfg = t; checkConfig(); }
         if (t - lastUpd >= S.checkMinutes * 60000) { lastUpd = t; checkUpdate(); }

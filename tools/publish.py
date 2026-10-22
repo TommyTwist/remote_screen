@@ -53,6 +53,8 @@ def clean_settings(s):
         out["nightMode"] = nm
     if isinstance((s or {}).get("muted"), bool):
         out["muted"] = s["muted"]
+    if isinstance((s or {}).get("chime"), bool):
+        out["chime"] = s["chime"]
     if (s or {}).get("fit") in ("contain", "cover"):
         out["fit"] = s["fit"]
     return out

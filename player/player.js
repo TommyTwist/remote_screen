@@ -20,6 +20,7 @@
   var sjcl = window.sjcl;
 
   var CHANGELOG = [
+    { v: "1.1.0", d: "22 Oct 2026", t: "Time check: a full-screen clock on the hour and half hour for 15 seconds, skipped while someone is using the remote. On by default; switch per screen in the console." },
     { v: "1.0.0", d: "22 Oct 2026", t: "First release: pairing codes and per-screen encryption; playlists of pictures, videos, YouTube, web pages, apps, messages and a clock; schedules; night mode; remote commands." }
   ];
 
@@ -161,7 +162,7 @@
   }
 
   // ---------- settings ----------
-  var DEFAULTS = { defaultSeconds: 20, nightStart: 23, nightEnd: 6, nightMode: "clock", muted: true, checkMinutes: 3, idleMinutes: 5, fit: "contain" };
+  var DEFAULTS = { chime: true, defaultSeconds: 20, nightStart: 23, nightEnd: 6, nightMode: "clock", muted: true, checkMinutes: 3, idleMinutes: 5, fit: "contain" };
   function mergeSettings(defs, own) {
     var o = {}, kk;
     for (kk in DEFAULTS) if (DEFAULTS.hasOwnProperty(kk)) o[kk] = DEFAULTS[kk];
@@ -174,6 +175,7 @@
     o.idleMinutes = num(o.idleMinutes, 1, 60, 5);
     if (o.nightMode !== "clock" && o.nightMode !== "black" && o.nightMode !== "off") o.nightMode = "clock";
     o.muted = o.muted !== false;
+    o.chime = o.chime !== false;
     return o;
   }
 
@@ -594,6 +596,7 @@
       '<div class="row"><div class="k">Now showing</div><div class="v">' + (cur ? esc(cur.p.c.name || cur.p.id) + " · " + esc(TYPE_LABEL[cur.p.c.type] || cur.p.c.type) + (paused ? " · paused" : " · " + fmtLeft(cur.dur - (now() - cur.startedAt)) + " left") : (nightOn ? "Night mode" : "Nothing")) + '</div></div>' +
       (cur ? '<div class="row"><div class="k">Up next</div><div class="v">' + esc(nextName || "—") + " · " + el2.length + " of " + playlist.length + ' items on now</div></div>' : "") +
       '<div class="row"><div class="k">Settings</div><div class="v">' + cfgLine + (payload ? " · published " + esc(shortTime(payload.updatedAt)) : "") + '</div></div>' +
+      '<div class="row"><div class="k">Time check</div><div class="v">' + (S.chime ? "Clock at :00 and :30 for 15s" : "Off") + '</div></div>' +
       '<div class="row"><div class="k">Night mode</div><div class="v">' + (S.nightMode === "off" ? "Off" : pad(S.nightStart) + ":00–" + pad(S.nightEnd) + ":00 · " + (S.nightMode === "black" ? "black screen" : "dim clock")) + '</div></div>' +
       '<div class="row"><div class="k">Player</div><div class="v">Loaded from ' + esc(BOOT.source || "package") + (BOOT.loaderVersion ? " · loader v" + esc(BOOT.loaderVersion) : "") + " · " + (subtleOk ? "fast decrypt" : "software decrypt") + '</div></div>' +
       (lastError ? '<div class="row"><div class="k">Last problem</div><div class="v warn">' + esc(lastError) + '</div></div>' : "") +
@@ -625,6 +628,7 @@
     lastKey = now();
     var kc = e.keyCode;
     if ($("ident").className === "on") { $("ident").className = ""; e.preventDefault(); return; }
+    if (chimeOn) { endChime(); e.preventDefault(); return; }
     if (nightOn && kc !== 10009 && kc !== 38 && kc !== 457) { nightOverrideUntil = now() + 10 * 60 * 1000; setNight(false); e.preventDefault(); return; }
     switch (kc) {
       case 37: case 412: if (pending) { clearLayer(layers[pending.layer]); pending = null; } advance(-1); break;
@@ -660,11 +664,43 @@
     }
   });
 
+  // ---------- time check: clock on the hour and half hour ----------
+  var chimeOn = false, chimeUntil = 0, chimeVideo = null, chimeStarted = 0, chimeDone = "";
+  function startChime(d) {
+    chimeOn = true; chimeStarted = now(); chimeUntil = chimeStarted + 15000;
+    chimeDone = d.getHours() + ":" + d.getMinutes();
+    var el = $("chime");
+    el.innerHTML = '<div class="clock"><div class="box"><div class="tm"></div><div class="dt"></div></div></div>';
+    tickClock(el.firstChild, true);
+    el.className = "on";
+    chimeVideo = current ? layers[front].getElementsByTagName("video")[0] || null : null;
+    if (chimeVideo) { try { chimeVideo.pause(); } catch (e) {} }
+  }
+  function endChime() {
+    if (!chimeOn) return;
+    chimeOn = false;
+    $("chime").className = ""; $("chime").innerHTML = "";
+    if (current) current.startedAt += now() - chimeStarted;   // the item gets its remaining time back
+    if (chimeVideo) { try { chimeVideo.play(); } catch (e) {} chimeVideo = null; }
+  }
+  function maybeChime(d, t) {
+    if (chimeOn) { if (t >= chimeUntil) endChime(); else tickClock($("chime").firstChild, false); return; }
+    if (!S.chime || access !== "registered" || nightOn || paused) return;
+    var m = d.getMinutes();
+    if ((m !== 0 && m !== 30) || d.getSeconds() > 5) return;
+    if (chimeDone === d.getHours() + ":" + m) return;
+    if (t - lastKey < S.idleMinutes * 60000) { chimeDone = d.getHours() + ":" + m; return; }  // someone is using the remote
+    if (current && current.p.c.type === "clock") { chimeDone = d.getHours() + ":" + m; return; }
+    startChime(d);
+  }
+
   // ---------- main loop ----------
   function tick() {
     var t = now(), d = new Date();
     if (access === "registered") setNight(inNight(d) && t > nightOverrideUntil);
-    if (nightOn) { if (d.getSeconds() === 0) moveNightClock(); return; }
+    if (nightOn) { endChime(); if (d.getSeconds() === 0) moveNightClock(); return; }
+    maybeChime(d, t);
+    if (chimeOn) return;
     if (paused && t - lastKey > S.idleMinutes * 60000) setPaused(false);
     if (current && !paused) {
       if (t - current.startedAt >= current.dur) advance(1);

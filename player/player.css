@@ -92,3 +92,7 @@ body{color:#e8edf5; font-family:"Plus Jakarta Sans","Samsung One","Tizen Sans",s
   background:rgba(0,0,0,.6); color:#f0bd52; border:1px solid #3a3020;}
 #pill.on{display:block;}
 .welcome .sid{font-size:40px; color:#c9d1dc;}
+
+/* time check clock (v1.1.0): above the playlist, below night/lock/overlays */
+#chime{position:absolute; left:0; top:0; width:1920px; height:1080px; display:none; z-index:15;}
+#chime.on{display:block;}

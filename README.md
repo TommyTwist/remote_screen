@@ -18,7 +18,7 @@ removing it takes effect at the next publish.
 | Website | Any link, with zoom. Some sites refuse to be shown inside other apps; those are skipped |
 | App | Fuel Watch, Weather, Local news, Traffic (see below) |
 | Message | Headline + text card, four themes |
-| Clock | Large drifting clock |
+| Clock | Large drifting clock on a slowly flowing background |
 
 Each item has its own display time and optional schedule (days, time window, start/end dates).
 Each screen has its own playlist, night hours (dim clock or black), mute and timings.

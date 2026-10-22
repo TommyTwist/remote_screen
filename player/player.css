@@ -36,11 +36,49 @@ body{color:#e8edf5; font-family:"Plus Jakarta Sans","Samsung One","Tizen Sans",s
 .msg .inner{-webkit-transition:-webkit-transform 1s ease; transition:transform 1s ease;}
 
 /* clock card */
-.clock{position:absolute; left:0; top:0; width:1920px; height:1080px; background:#05080d;}
-.clock .box{position:absolute; left:0; top:0; width:1920px; text-align:center;}
-.clock .tm{font-family:"JetBrains Mono","Courier New",monospace; font-size:260px; font-weight:600; color:#cfd7e2; letter-spacing:-.02em; line-height:1;}
-.clock .dt{font-size:54px; font-weight:600; color:#6f7b8b; margin-top:24px;}
-.clock .lbl{font-size:30px; color:#4a5563; margin-top:18px;}
+.clock{position:absolute; left:0; top:0; width:1920px; height:1080px; background:#04070d; overflow:hidden;}
+.clock .box{position:absolute; left:0; top:0; width:1920px; text-align:center; z-index:3;}
+.clock .tm{font-family:"JetBrains Mono","Courier New",monospace; font-size:260px; font-weight:600; color:#eef3f9; letter-spacing:-.02em; line-height:1;
+  text-shadow:0 6px 40px rgba(2,6,14,.55);}
+.clock .dt{font-size:54px; font-weight:600; color:#b4c2d3; margin-top:24px; text-shadow:0 3px 18px rgba(2,6,14,.6);}
+.clock .lbl{font-size:30px; color:#8796a8; margin-top:18px;}
+
+/* flowing background (v1.4.0): soft glows drifting behind the clock.
+   Transform/opacity-only animations so the 2016 TVs composite them on the GPU; no filters or blend modes. */
+.clock .flow{position:absolute; left:0; top:0; width:1920px; height:1080px; z-index:1; overflow:hidden;}
+.clock .flow i{position:absolute; display:block; border-radius:50%;
+  -webkit-animation-timing-function:ease-in-out; animation-timing-function:ease-in-out;
+  -webkit-animation-iteration-count:infinite; animation-iteration-count:infinite;
+  -webkit-animation-direction:alternate; animation-direction:alternate;}
+.clock .flow .b1{left:-420px; top:-380px; width:1500px; height:1500px;
+  background:-webkit-radial-gradient(50% 50%, circle closest-side, rgba(37,99,235,.62) 0%, rgba(37,99,235,.22) 45%, rgba(37,99,235,0) 100%);
+  background:radial-gradient(circle closest-side at 50% 50%, rgba(37,99,235,.62) 0%, rgba(37,99,235,.22) 45%, rgba(37,99,235,0) 100%);
+  -webkit-animation-name:rsFlow1; animation-name:rsFlow1; -webkit-animation-duration:26s; animation-duration:26s;}
+.clock .flow .b2{left:760px; top:120px; width:1600px; height:1600px;
+  background:-webkit-radial-gradient(50% 50%, circle closest-side, rgba(16,185,129,.62) 0%, rgba(16,185,129,.24) 45%, rgba(16,185,129,0) 100%);
+  background:radial-gradient(circle closest-side at 50% 50%, rgba(16,185,129,.62) 0%, rgba(16,185,129,.24) 45%, rgba(16,185,129,0) 100%);
+  -webkit-animation-name:rsFlow2; animation-name:rsFlow2; -webkit-animation-duration:31s; animation-duration:31s; -webkit-animation-delay:-9s; animation-delay:-9s;}
+.clock .flow .b3{left:300px; top:380px; width:1200px; height:1200px;
+  background:-webkit-radial-gradient(50% 50%, circle closest-side, rgba(14,165,233,.42) 0%, rgba(14,165,233,.14) 45%, rgba(14,165,233,0) 100%);
+  background:radial-gradient(circle closest-side at 50% 50%, rgba(14,165,233,.42) 0%, rgba(14,165,233,.14) 45%, rgba(14,165,233,0) 100%);
+  -webkit-animation-name:rsFlow3; animation-name:rsFlow3; -webkit-animation-duration:22s; animation-duration:22s; -webkit-animation-delay:-5s; animation-delay:-5s;}
+.clock .flow .b4{left:1100px; top:-520px; width:1300px; height:1300px;
+  background:-webkit-radial-gradient(50% 50%, circle closest-side, rgba(99,102,241,.4) 0%, rgba(99,102,241,.12) 45%, rgba(99,102,241,0) 100%);
+  background:radial-gradient(circle closest-side at 50% 50%, rgba(99,102,241,.4) 0%, rgba(99,102,241,.12) 45%, rgba(99,102,241,0) 100%);
+  -webkit-animation-name:rsFlow4; animation-name:rsFlow4; -webkit-animation-duration:35s; animation-duration:35s; -webkit-animation-delay:-14s; animation-delay:-14s;}
+/* gentle dark centre so the time always reads clearly over the glow */
+.clock .veil{position:absolute; left:0; top:0; width:1920px; height:1080px; z-index:2;
+  background:-webkit-radial-gradient(50% 48%, ellipse closest-side, rgba(4,7,13,.55) 0%, rgba(4,7,13,.2) 60%, rgba(4,7,13,0) 100%);
+  background:radial-gradient(ellipse closest-side at 50% 48%, rgba(4,7,13,.55) 0%, rgba(4,7,13,.2) 60%, rgba(4,7,13,0) 100%);}
+
+@-webkit-keyframes rsFlow1{0%{-webkit-transform:translate3d(0,0,0) scale(1);} 50%{-webkit-transform:translate3d(520px,240px,0) scale(1.18);} 100%{-webkit-transform:translate3d(180px,520px,0) scale(.92);}}
+@keyframes rsFlow1{0%{transform:translate3d(0,0,0) scale(1);} 50%{transform:translate3d(520px,240px,0) scale(1.18);} 100%{transform:translate3d(180px,520px,0) scale(.92);}}
+@-webkit-keyframes rsFlow2{0%{-webkit-transform:translate3d(0,0,0) scale(1.05);} 50%{-webkit-transform:translate3d(-560px,-300px,0) scale(.9);} 100%{-webkit-transform:translate3d(-220px,-620px,0) scale(1.15);}}
+@keyframes rsFlow2{0%{transform:translate3d(0,0,0) scale(1.05);} 50%{transform:translate3d(-560px,-300px,0) scale(.9);} 100%{transform:translate3d(-220px,-620px,0) scale(1.15);}}
+@-webkit-keyframes rsFlow3{0%{-webkit-transform:translate3d(0,0,0) scale(.9); opacity:.7;} 50%{-webkit-transform:translate3d(640px,-260px,0) scale(1.2); opacity:1;} 100%{-webkit-transform:translate3d(-300px,-120px,0) scale(1); opacity:.8;}}
+@keyframes rsFlow3{0%{transform:translate3d(0,0,0) scale(.9); opacity:.7;} 50%{transform:translate3d(640px,-260px,0) scale(1.2); opacity:1;} 100%{transform:translate3d(-300px,-120px,0) scale(1); opacity:.8;}}
+@-webkit-keyframes rsFlow4{0%{-webkit-transform:translate3d(0,0,0) scale(1); opacity:.9;} 50%{-webkit-transform:translate3d(-700px,420px,0) scale(1.12); opacity:.6;} 100%{-webkit-transform:translate3d(-1100px,180px,0) scale(.95); opacity:1;}}
+@keyframes rsFlow4{0%{transform:translate3d(0,0,0) scale(1); opacity:.9;} 50%{transform:translate3d(-700px,420px,0) scale(1.12); opacity:.6;} 100%{transform:translate3d(-1100px,180px,0) scale(.95); opacity:1;}}
 
 /* idle / welcome */
 #idle{position:absolute; left:0; top:0; width:1920px; height:1080px; background:#05080d; display:none; z-index:5;}

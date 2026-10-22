@@ -23,6 +23,7 @@
     (window.PalmSystem || window.PalmServiceBridge || /Web0S|webOS/i.test(navigator.userAgent)) ? "webos" : "web";
 
   var CHANGELOG = [
+    { v: "1.4.0", d: "22 Oct 2026", t: "Clock screen: the clock (in playlists and the :00/:30 time check) now sits on a slowly flowing background of soft blue, teal and green light. Night mode's dim clock is unchanged." },
     { v: "1.3.0", d: "22 Oct 2026", t: "LG TVs: the player now runs on LG webOS as well as Samsung. LG screens get a Screen ID starting LG-, show their model in the status panel, and the remote's BACK button closes the app. Nothing changes on Samsung screens." },
     { v: "1.2.2", d: "22 Oct 2026", t: "Never a black screen: a Starting up card shows straight away, and if the player can't get going within 25 seconds the TV shows a report of what went wrong (version, browser and any errors) instead of staying dark." },
     { v: "1.2.1", d: "22 Oct 2026", t: "Fix: some TVs showed a blank screen instead of the pairing card. The card now always shows first with the Screen ID and code; the QR code is added on top only if the TV can draw it, as a plain image." },
@@ -491,11 +492,16 @@
     } else if (t === "clock") {
       node = document.createElement("div");
       node.className = "clock";
-      node.innerHTML = '<div class="box"><div class="tm"></div><div class="dt"></div>' + (c.label ? '<div class="lbl">' + esc(c.label) + '</div>' : "") + '</div>';
+      node.innerHTML = clockHTML(c.label);
       el.appendChild(node);
       tickClock(node, true);
       ok();
     } else bad("unknown type " + t);
+  }
+  // clock card markup: flowing background (.flow), a soft veil behind the text, then the time
+  function clockHTML(label) {
+    return '<div class="flow"><i class="b1"></i><i class="b2"></i><i class="b3"></i><i class="b4"></i></div><div class="veil"></div>' +
+      '<div class="box"><div class="tm"></div><div class="dt"></div>' + (label ? '<div class="lbl">' + esc(label) + '</div>' : "") + '</div>';
   }
   function tickClock(node, move) {
     var d = new Date(), box = node && node.querySelector ? node.querySelector(".box") : null;
@@ -779,7 +785,7 @@
     chimeOn = true; chimeStarted = now(); chimeUntil = chimeStarted + 15000;
     chimeDone = d.getHours() + ":" + d.getMinutes();
     var el = $("chime");
-    el.innerHTML = '<div class="clock"><div class="box"><div class="tm"></div><div class="dt"></div></div></div>';
+    el.innerHTML = '<div class="clock">' + clockHTML("") + '</div>';
     tickClock(el.firstChild, true);
     el.className = "on";
     chimeVideo = current ? layers[front].getElementsByTagName("video")[0] || null : null;

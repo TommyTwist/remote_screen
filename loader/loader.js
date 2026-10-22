@@ -3,7 +3,7 @@
    and falls back to the copy bundled in this package. ES5 only. */
 (function () {
   "use strict";
-  var LOADER_VERSION = "1.0.1";
+  var LOADER_VERSION = "1.0.2";
   var BASE = "https://raw.githubusercontent.com/TommyTwist/remote_screen/main/player/";
   var CACHE_KEY = "rs.playerCache";
 

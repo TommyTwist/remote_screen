@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<widget xmlns="http://www.w3.org/ns/widgets" xmlns:tizen="http://tizen.org/ns/widgets" id="http://github.com/TommyTwist/remote_screen" version="1.0.1" viewmodes="maximized">
-    <tizen:application id="RScreenHub.ScreenHub" package="RScreenHub" required_version="2.3"/>
+<widget xmlns="http://www.w3.org/ns/widgets" xmlns:tizen="http://tizen.org/ns/widgets" id="http://github.com/TommyTwist/remote_screen" version="1.0.2" viewmodes="maximized">
+    <tizen:application id="RScreenHub.ScreenHub" package="RScreenHub" required_version="2.4"/>
     <content src="index.html"/>
+    <feature name="http://tizen.org/feature/screen.size.all"/>
     <icon src="icon.png"/>
     <name>Screen Hub</name>
     <name xml:lang="en-gb">Screen Hub</name>
@@ -12,6 +13,5 @@
     <tizen:privilege name="http://tizen.org/privilege/tv.inputdevice"/>
     <tizen:privilege name="http://developer.samsung.com/privilege/productinfo"/>
     <access origin="*" subdomains="true"/>
-    <tizen:allow-navigation>*</tizen:allow-navigation>
     <tizen:setting screen-orientation="landscape" context-menu="disable" background-support="disable" encryption="disable" install-location="auto" hwkey-event="enable"/>
 </widget>

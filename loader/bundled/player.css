@@ -109,4 +109,4 @@ body{color:#e8edf5; font-family:"Plus Jakarta Sans","Samsung One","Tizen Sans",s
 .welcome.pair .pk .v.code{color:#f0bd52;}
 .welcome.pair .clk{position:absolute; left:60px; bottom:48px; margin:0;}
 .welcome .qr{position:absolute; right:56px; top:56px; width:460px; height:460px; border-radius:22px; background:#ffffff; padding:20px;}
-.welcome .qr canvas{display:block;}
+.welcome .qr img{display:block;}

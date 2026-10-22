@@ -20,6 +20,7 @@
   var sjcl = window.sjcl;
 
   var CHANGELOG = [
+    { v: "1.2.1", d: "22 Oct 2026", t: "Fix: some TVs showed a blank screen instead of the pairing card. The card now always shows first with the Screen ID and code; the QR code is added on top only if the TV can draw it, as a plain image." },
     { v: "1.2.0", d: "22 Oct 2026", t: "Pairing by QR code: the pairing card shows a QR code to scan from the Screen Hub console on a phone. The Screen ID and code are still shown underneath for typing in." },
     { v: "1.1.0", d: "22 Oct 2026", t: "Time check: a full-screen clock on the hour and half hour for 15 seconds, skipped while someone is using the remote. On by default; switch per screen in the console." },
     { v: "1.0.0", d: "22 Oct 2026", t: "First release: pairing codes and per-screen encryption; playlists of pictures, videos, YouTube, web pages, apps, messages and a clock; schedules; night mode; remote commands." }
@@ -547,8 +548,20 @@
     var el = $("lock");
     if (access === "blocked") el.innerHTML = card("This screen has been switched off", "Switch it back on in the Screen Hub console. It checks again every few minutes.", false);
     else if (access === "offline") el.innerHTML = card("Can't reach the internet", "Screen Hub will keep trying. Check the TV's network connection.", false);
-    else if (hasQr()) { el.innerHTML = pairCard(); drawQr($("pairQr")); }
-    else el.innerHTML = card("Pair this screen", "In the Screen Hub console, choose Pair a new screen and enter this Screen ID and pairing code. Content appears within a few minutes of the next publish.", true);
+    else {
+      // text card first, so the Screen ID and code are always on screen whatever happens next
+      el.innerHTML = card("Pair this screen", "In the Screen Hub console, choose Pair a new screen and enter this Screen ID and pairing code. Content appears within a few minutes of the next publish.", true);
+      try {
+        if (hasQr()) {
+          var keep = el.innerHTML;
+          el.innerHTML = pairCard();
+          if (!drawQr($("pairQr"))) el.innerHTML = keep;
+        }
+      } catch (e) {
+        lastError = "pairing card: " + (e && e.message || e);
+        el.innerHTML = card("Pair this screen", "In the Screen Hub console, choose Pair a new screen and enter this Screen ID and pairing code. Content appears within a few minutes of the next publish.", true);
+      }
+    }
     el.className = "on";
     moveCard2();
   }
@@ -570,23 +583,23 @@
   function pairPayload() { return "SCREENHUB:1:" + screenId + ":" + pairCode; }
   function hasQr() { return typeof window.qrcode === "function" && !!screenId && !!pairCode; }
   function drawQr(box) {
-    if (!box) return;
+    // Plain GIF image from the QR library: no canvas, so it works on the oldest TV browsers.
+    if (!box) return false;
     try {
       var q = window.qrcode(0, "M");
       q.addData(pairPayload());
       q.make();
-      var n = q.getModuleCount(), quiet = 4, cell = Math.floor(400 / (n + quiet * 2)), size = cell * (n + quiet * 2);
-      var cv = document.createElement("canvas");
-      cv.width = size; cv.height = size;
-      var g = cv.getContext("2d"), r, c;
-      g.fillStyle = "#ffffff"; g.fillRect(0, 0, size, size);
-      g.fillStyle = "#05080d";
-      for (r = 0; r < n; r++) for (c = 0; c < n; c++) if (q.isDark(r, c)) g.fillRect((c + quiet) * cell, (r + quiet) * cell, cell, cell);
-      cv.style.marginTop = cv.style.marginLeft = Math.floor((420 - size) / 2) + "px";
+      var n = q.getModuleCount(), quiet = 4, cell = Math.max(2, Math.floor(400 / (n + quiet * 2))), size = cell * (n + quiet * 2);
+      var img = document.createElement("img");
+      img.src = q.createDataURL(cell, cell * quiet);
+      img.width = size; img.height = size;
+      img.style.marginTop = img.style.marginLeft = Math.max(0, Math.floor((420 - size) / 2)) + "px";
       box.innerHTML = "";
-      box.appendChild(cv);
+      box.appendChild(img);
+      return true;
     } catch (e) {
-      box.parentNode && box.parentNode.removeChild(box);
+      lastError = "QR code: " + (e && e.message || e);
+      return false;
     }
   }
   function pairCard() {
@@ -756,7 +769,7 @@
     }
     if (current && current.p.c.type === "clock") tickClock(layers[front].querySelector(".clock"), false);
     var ic = $("idleClock"); if (ic) ic.textContent = hhmm(d);
-    if (d.getSeconds() === 0 && d.getMinutes() % 2 === 0) { moveCard(); moveCard2(); }
+    if (d.getSeconds() === 0 && d.getMinutes() % 2 === 0) { try { moveCard(); moveCard2(); } catch (e) {} }
     if ($("idle").className === "on" && d.getSeconds() % 15 === 0 && eligibleList().length) advance(1, true);
     if ($("info").className === "on" && d.getSeconds() % 2 === 0) renderInfo();
   }

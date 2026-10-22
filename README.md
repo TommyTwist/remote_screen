@@ -42,6 +42,28 @@ An app is one self-contained HTML file; the player writes it into a frame and pa
 - Checks for changes every 3 minutes. Night hours show a dim drifting clock or a black screen; any button wakes it for 10 minutes.
 - Remote commands from the console: identify, skip to next, show an item now, reload.
 
+## TV Remote (Samsung, from the PC)
+
+`tools/tvremote.py` controls Samsung TVs straight over the home network, so it is instant but only works at home.
+Standard-library Python 3.8+, nothing to install.
+
+```
+python tools/tvremote.py find        # find TVs that are switched on and save them
+python tools/tvremote.py ui          # control page at http://127.0.0.1:8765
+python tools/tvremote.py on --open   # Wake-on-LAN, then start Screen Hub
+python tools/tvremote.py say "Dinner's ready" --seconds 90 --theme alert
+python tools/tvremote.py --tv all off
+```
+
+- Power on (Wake-on-LAN) and off, open Screen Hub, volume and mute, any remote key, list installed apps.
+- Playlist: next, previous, pause, identify and the status panel, by sending the same buttons the TV remote has.
+- **Show now** (player 1.5.0+): a message, clock, YouTube video or web page for a set time, then the playlist carries on.
+  It works by relaunching Screen Hub with a small payload (Samsung `DEEP_LINK` metaTag); the player accepts only these
+  display actions and escapes any text. YouTube can also open in the TV's own YouTube app.
+- The first connection shows an Allow prompt on the TV. Saved TVs and tokens are kept in `~/.screenhub/tvremote.json`, outside the repo.
+- Switching on needs network standby (Samsung Instant On) and is most reliable on a wired connection.
+- The control page listens on 127.0.0.1 only and refuses requests from other websites.
+
 ## Files
 
 ```

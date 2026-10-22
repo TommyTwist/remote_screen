@@ -23,6 +23,7 @@
     (window.PalmSystem || window.PalmServiceBridge || /Web0S|webOS/i.test(navigator.userAgent)) ? "webos" : "web";
 
   var CHANGELOG = [
+    { v: "1.5.0", d: "22 Oct 2026", t: "Samsung: instant control from the PC. The TV Remote tool on the home network can show a message, clock, YouTube video or web page straight away for a set time, then the playlist carries on. It can also skip, identify or reload a screen without waiting for a publish." },
     { v: "1.4.0", d: "22 Oct 2026", t: "Clock screen: the clock (in playlists and the :00/:30 time check) now sits on a slowly flowing background of soft blue, teal and green light. Night mode's dim clock is unchanged." },
     { v: "1.3.0", d: "22 Oct 2026", t: "LG TVs: the player now runs on LG webOS as well as Samsung. LG screens get a Screen ID starting LG-, show their model in the status panel, and the remote's BACK button closes the app. Nothing changes on Samsung screens." },
     { v: "1.2.2", d: "22 Oct 2026", t: "Never a black screen: a Starting up card shows straight away, and if the player can't get going within 25 seconds the TV shows a report of what went wrong (version, browser and any errors) instead of staying dark." },
@@ -248,8 +249,9 @@
     playlist = resolvePlaylist(screenCfg.playlist, contentMap);
     var sig = JSON.stringify(playlist.map(function (p) { return p.key + ":" + JSON.stringify(p.c) + ":" + (p.seconds || ""); }));
     if (!fromCache) handleCommand(screenCfg.command);
+    if (pendingLive) { var pl2 = pendingLive; pendingLive = null; playlistSig = sig; doLive(pl2); return; }
     if (prev !== "registered" || sig !== playlistSig) {
-      var changedCurrent = !current || !stillListed(current.p);
+      var changedCurrent = !current || (!current.p.live && !stillListed(current.p));
       playlistSig = sig;
       if (changedCurrent || prev !== "registered") advance(1, true);
     }
@@ -310,6 +312,51 @@
     el.className = "on";
     clearTimeout(identTimer);
     identTimer = setTimeout(function () { el.className = ""; }, 30000);
+  }
+
+  // ---------- live control from the PC (Samsung app control) ----------
+  // The TV Remote tool on the home network relaunches Screen Hub with a small JSON payload
+  // (Samsung DEEP_LINK metaTag). Only display actions are accepted; text is escaped when shown.
+  var pendingLive = null;
+  var LIVE_TYPES = { message: 1, clock: 1, youtube: 1, web: 1, image: 1 };
+  function parseLive(raw) {
+    var v = raw, i;
+    for (i = 0; i < 3 && typeof v === "string"; i++) { try { v = JSON.parse(v); } catch (e) { return null; } if (v && v.values !== undefined && v.rs === undefined) v = v.values; }
+    return v && v.rs === 1 && v.action ? v : null;
+  }
+  function readAppControl() {
+    if (PLATFORM !== "tizen") return;
+    var rq = null, d, i;
+    try { rq = window.tizen.application.getCurrentApplication().getRequestedAppControl(); } catch (e) { return; }
+    d = rq && rq.appControl && rq.appControl.data || [];
+    for (i = 0; i < d.length; i++) {
+      if (d[i].key !== "PAYLOAD" && d[i].key !== "payload") continue;
+      var cmd = parseLive(d[i].value && d[i].value[0]);
+      if (cmd) onLive(cmd);
+    }
+  }
+  function onLive(cmd) {
+    if (cmd.id && lsGet("rs.lastLive") === String(cmd.id)) return; // the same launch read twice
+    if (cmd.id) lsSet("rs.lastLive", String(cmd.id));
+    lastKey = now(); // counts as someone using the screen: no time check over it
+    if (access !== "registered") { pendingLive = cmd; return; }
+    doLive(cmd);
+  }
+  function doLive(cmd) {
+    var a = cmd.action;
+    if (nightOn && a !== "reload") { nightOverrideUntil = now() + 10 * 60 * 1000; setNight(false); }
+    endChime();
+    if (a === "reload") { setTimeout(function () { window.location.reload(); }, 300); return; }
+    if (a === "identify") { identify(); return; }
+    if (a === "next" || a === "prev" || a === "resume") { if (pending) { clearLayer(layers[pending.layer]); pending = null; } advance(a === "prev" ? -1 : 1); return; }
+    if (a === "pause") { setPaused(!paused); return; }
+    if (a !== "live" || !cmd.item || !LIVE_TYPES[cmd.item.type]) return;
+    var c = {}, k2;
+    for (k2 in cmd.item) if (cmd.item.hasOwnProperty(k2)) c[k2] = cmd.item[k2];
+    if (!c.name) c.name = "Live: " + (TYPE_LABEL[c.type] || c.type);
+    if (c.type === "youtube" && c.untilEnd === undefined) c.untilEnd = false;
+    var item = { key: "live#" + (cmd.id || now()), id: "live", c: c, seconds: num(cmd.seconds, 5, 7200, 60), live: true };
+    play(-1, item);
   }
 
   // ---------- schedules ----------
@@ -540,8 +587,8 @@
   function jumpTo(contentId) {
     for (var i = 0; i < playlist.length; i++) if (playlist[i].id === contentId) { if (pending) { clearLayer(layers[pending.layer]); pending = null; } play(i); return; }
   }
-  function play(pos) {
-    var p = playlist[pos], back = 1 - front, el = layers[back], token = {};
+  function play(pos, liveItem) {
+    var p = liveItem || playlist[pos], back = 1 - front, el = layers[back], token = {};
     if (pending) clearLayer(layers[pending.layer]);
     pending = { token: token, layer: back };
     clearLayer(el);
@@ -553,7 +600,8 @@
       el.className = "layer front"; old.className = "layer";
       front = back;
       setTimeout(function () { if (old !== layers[front]) clearLayer(old); }, 900);
-      posIdx = pos; paused = false;
+      if (!liveItem) posIdx = pos;
+      paused = false;
       current = { p: p, startedAt: now(), dur: durationOf(p) };
       updatePill(); if ($("info").className === "on") renderInfo();
       setTimeout(prefetchNext, 1500);
@@ -561,9 +609,9 @@
       if (!pending || pending.token !== token) return;
       pending = null;
       clearLayer(el);
-      failed[p.key] = now() + 10 * 60 * 1000;
+      if (!liveItem) failed[p.key] = now() + 10 * 60 * 1000;
       lastError = (p.c.name || p.id) + ": " + why;
-      posIdx = pos;
+      if (!liveItem) posIdx = pos;
       setTimeout(function () { advance(1); }, 300);
     });
   }
@@ -848,6 +896,7 @@
     resolveId(function () {
       try { showLock(); } catch (e) { guardErr("starting card", e); }
       try { checkConfig(); } catch (e) { guardErr("config check", e); }
+      try { readAppControl(); window.addEventListener("appcontrol", function () { try { readAppControl(); } catch (e) { guardErr("live control", e); } }); } catch (e) { guardErr("live control", e); }
       var lastCfg = now(), lastUpd = now();
       setInterval(function () {
         try { tick(); } catch (e) { guardErr("tick", e); }
@@ -860,7 +909,7 @@
     });
   }
   window.RS_PLAYER = {
-    version: VERSION, changelog: CHANGELOG,
+    version: VERSION, changelog: CHANGELOG, live: function (cmd) { onLive(typeof cmd === "string" ? parseLive(cmd) || {} : cmd); },
     state: function () { return { platform: PLATFORM, screenId: screenId, fileId: fileId, access: access, playing: current && current.p.id, paused: paused, night: nightOn, items: playlist.length, lastError: lastError, subtle: subtleOk }; }
   };
   start();

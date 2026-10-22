@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TV Remote</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg-a:#eef4fd; --bg-b:#eafaf3; --card:#ffffff; --card-2:#f5f8fc; --line:#dde5ef; --fg:#141b26; --muted:#5d6a7c;
+  --accent:#2563eb; --accent-2:#10b981; --ok:#0f9d6b; --warn:#b7791f; --bad:#d64545;
+  --pill-bg:#ffffffcc; --pill-fg:#1b2a40; --pill-border:#cfd9e6; --btn:#eef3fa; --btn-hover:#e1e9f5; --shadow:0 1px 2px #0b16260d,0 6px 20px #0b16260a;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg-a:#0b1220; --bg-b:#0a1613; --card:#121b2b; --card-2:#162236; --line:#22324a; --fg:#e7edf6; --muted:#93a1b5;
+    --accent:#5b8cff; --accent-2:#34d399; --ok:#34d399; --warn:#f0bd52; --bad:#f17878;
+    --pill-bg:#121b2bcc; --pill-fg:#dbe5f3; --pill-border:#2a3b55; --btn:#1a2740; --btn-hover:#22324f; --shadow:0 1px 2px #0006,0 8px 24px #0004;
+  }
+}
+:root[data-theme="dark"]{
+  --bg-a:#0b1220; --bg-b:#0a1613; --card:#121b2b; --card-2:#162236; --line:#22324a; --fg:#e7edf6; --muted:#93a1b5;
+  --accent:#5b8cff; --accent-2:#34d399; --ok:#34d399; --warn:#f0bd52; --bad:#f17878;
+  --pill-bg:#121b2bcc; --pill-fg:#dbe5f3; --pill-border:#2a3b55; --btn:#1a2740; --btn-hover:#22324f; --shadow:0 1px 2px #0006,0 8px 24px #0004;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{min-height:100vh; background:var(--bg-a); background:linear-gradient(135deg,var(--bg-a),var(--bg-b)) fixed;
+  color:var(--fg); font:15px/1.5 'Plus Jakarta Sans',system-ui,sans-serif; -webkit-font-smoothing:antialiased}
+.wrap{max-width:880px; margin:0 auto; padding:28px 16px 60px}
+header{display:flex; flex-wrap:wrap; align-items:center; gap:12px 16px; margin-bottom:22px}
+h1{font-size:26px; font-weight:800; letter-spacing:-.01em; margin:0; text-wrap:balance}
+h2{font-size:15px; font-weight:700; margin:0 0 12px; text-wrap:balance}
+.sub{color:var(--muted); font-size:13.5px; margin:2px 0 0}
+.pill-row{display:flex; gap:8px; align-items:center; margin-left:auto; position:relative}
+.pill{display:inline-flex; align-items:center; gap:6px; padding:4px 12px; border-radius:999px; font:600 12px 'JetBrains Mono',ui-monospace,monospace;
+  border:1px solid var(--pill-border); background:var(--pill-bg); color:var(--pill-fg); cursor:pointer; font-variant-numeric:tabular-nums}
+.pill-version{background:linear-gradient(90deg,#2563eb,#10b981); color:#fff; border-color:transparent}
+.pill-refresh::before{content:""; width:7px; height:7px; border-radius:50%; background:var(--accent-2)}
+.pop{position:absolute; right:0; top:34px; width:min(360px,calc(100vw - 32px)); background:var(--card); border:1px solid var(--line); border-radius:14px;
+  box-shadow:var(--shadow); padding:14px 16px; z-index:20; display:none; font-size:13px}
+.pop.on{display:block}
+.pop h3{margin:0 0 8px; font-size:13px}
+.pop .e{padding:7px 0; border-top:1px solid var(--line)} .pop .e:first-of-type{border-top:0}
+.pop .v{font-family:'JetBrains Mono',ui-monospace,monospace; font-weight:600; font-size:12px}
+.pop .d{color:var(--muted); font-size:12px}
+.card{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:18px; box-shadow:var(--shadow); margin-bottom:14px}
+.tvs{display:flex; flex-wrap:wrap; gap:8px}
+.tv{display:flex; align-items:center; gap:8px; padding:8px 14px; border-radius:12px; border:1px solid var(--line); background:var(--card-2); cursor:pointer; color:var(--fg); font:inherit}
+.tv.sel{border-color:var(--accent); box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 25%,transparent)}
+.tv small{color:var(--muted); font-family:'JetBrains Mono',ui-monospace,monospace; font-size:11px}
+.dot{width:9px; height:9px; border-radius:50%; background:var(--muted)} .dot.on{background:var(--ok)} .dot.off{background:var(--bad)} .dot.standby{background:var(--warn)}
+.grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:14px}
+.row{display:flex; flex-wrap:wrap; gap:8px}
+button.b{font:600 14px 'Plus Jakarta Sans',system-ui,sans-serif; padding:9px 14px; border-radius:11px; border:1px solid var(--line); background:var(--btn); color:var(--fg); cursor:pointer; min-width:44px}
+button.b:hover{background:var(--btn-hover)} button.b:active{transform:translateY(1px)}
+button.b.pri{background:linear-gradient(90deg,var(--accent),var(--accent-2)); color:#fff; border-color:transparent}
+button.b:disabled{opacity:.5; cursor:default}
+.lbl{font-size:12px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.06em; margin:0 0 8px}
+.tabs{display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap}
+.tab{font:600 13px inherit; font-family:inherit; padding:6px 12px; border-radius:999px; border:1px solid var(--line); background:transparent; color:var(--muted); cursor:pointer}
+.tab.on{background:var(--btn); color:var(--fg); border-color:var(--accent)}
+label{display:block; font-size:12.5px; color:var(--muted); font-weight:600; margin:10px 0 4px}
+input,select,textarea{width:100%; font:inherit; color:var(--fg); background:var(--card-2); border:1px solid var(--line); border-radius:10px; padding:9px 11px}
+textarea{min-height:70px; resize:vertical}
+.two{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace; font-size:12.5px}
+details{background:var(--card); border:1px solid var(--line); border-radius:16px; margin-bottom:12px; box-shadow:var(--shadow)}
+summary{cursor:pointer; padding:14px 18px; font-weight:700; list-style:none; display:flex; justify-content:space-between; align-items:center}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+"; color:var(--muted); font-weight:600; font-size:18px}
+details[open] summary::after{content:"–"}
+details .in{padding:0 18px 18px}
+.apps{max-height:300px; overflow:auto; border:1px solid var(--line); border-radius:10px}
+.apps div{display:flex; justify-content:space-between; gap:10px; padding:7px 10px; border-top:1px solid var(--line); font-size:13px}
+.apps div:first-child{border-top:0}
+.pad{display:grid; grid-template-columns:repeat(3,56px); gap:6px; justify-content:start}
+.pad .b{padding:12px 0}
+.toast{position:fixed; left:50%; bottom:22px; transform:translateX(-50%); max-width:min(560px,calc(100vw - 32px)); background:var(--card); border:1px solid var(--line);
+  border-radius:12px; padding:10px 14px; box-shadow:var(--shadow); font-size:13.5px; display:none; white-space:pre-line; z-index:30}
+.toast.on{display:block} .toast.bad{border-color:var(--bad)}
+.note{color:var(--muted); font-size:13.5px; max-width:65ch}
+.note p{margin:0 0 8px}
+.empty{color:var(--muted); font-size:14px}
+@media (max-width:520px){ .two{grid-template-columns:1fr} .pill-row{margin-left:0} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>TV Remote</h1>
+      <p class="sub">Screen Hub · Samsung TVs on this network</p>
+    </div>
+    <div class="pill-row">
+      <button class="pill pill-version" id="verBtn" aria-expanded="false" title="View changelog">v1.0.0</button>
+      <button class="pill pill-refresh" id="refBtn" aria-expanded="false" title="View data sources">Checking…</button>
+      <div class="pop" id="verPop" role="dialog" aria-label="Changelog"></div>
+      <div class="pop" id="refPop" role="dialog" aria-label="Data sources"></div>
+    </div>
+  </header>
+
+  <section class="card">
+    <p class="lbl">Screen</p>
+    <div class="tvs" id="tvs"><span class="empty">Looking for saved TVs…</span></div>
+  </section>
+
+  <div class="grid">
+    <section class="card">
+      <h2>Power</h2>
+      <div class="row">
+        <button class="b pri" data-act="on" data-args='{"open":true}'>On + Screen Hub</button>
+        <button class="b" data-act="on">On</button>
+        <button class="b" data-act="off">Off</button>
+        <button class="b" data-act="open">Open Screen Hub</button>
+      </div>
+    </section>
+    <section class="card">
+      <h2>Playlist</h2>
+      <div class="row">
+        <button class="b" data-act="prev" title="Previous">◀</button>
+        <button class="b" data-act="pause" title="Pause / resume">Pause</button>
+        <button class="b" data-act="next" title="Next">▶</button>
+        <button class="b" data-act="identify">Identify</button>
+        <button class="b" data-act="info">Status panel</button>
+      </div>
+    </section>
+    <section class="card">
+      <h2>Sound</h2>
+      <div class="row">
+        <button class="b" data-act="vol" data-args='{"dir":"down","steps":2}'>− 2</button>
+        <button class="b" data-act="mute">Mute</button>
+        <button class="b" data-act="vol" data-args='{"dir":"up","steps":2}'>+ 2</button>
+      </div>
+    </section>
+  </div>
+
+  <section class="card">
+    <h2>Show now</h2>
+    <div class="tabs" role="tablist">
+      <button class="tab on" data-tab="say">Message</button>
+      <button class="tab" data-tab="youtube">YouTube</button>
+      <button class="tab" data-tab="web">Website</button>
+      <button class="tab" data-tab="clock">Clock</button>
+    </div>
+    <div data-pane="say">
+      <label for="sTitle">Headline</label><input id="sTitle" maxlength="80" placeholder="Dinner's ready">
+      <label for="sBody">Text (optional)</label><textarea id="sBody" maxlength="400"></textarea>
+      <div class="two">
+        <div><label for="sKick">Small label above (optional)</label><input id="sKick" maxlength="40"></div>
+        <div><label for="sTheme">Look</label><select id="sTheme"><option value="gradient">Blue–green</option><option value="dark">Dark</option><option value="light">Light</option><option value="alert">Alert</option></select></div>
+      </div>
+    </div>
+    <div data-pane="youtube" hidden>
+      <label for="yId">Video link or ID</label><input id="yId" placeholder="https://youtu.be/…">
+      <div class="two">
+        <div><label for="ySound">Sound</label><select id="ySound"><option value="0">Muted</option><option value="1">On</option></select></div>
+        <div><label for="yWhere">Play in</label><select id="yWhere"><option value="hub">Screen Hub (then back to the playlist)</option><option value="app">The TV's YouTube app</option></select></div>
+      </div>
+    </div>
+    <div data-pane="web" hidden>
+      <label for="wUrl">Web address</label><input id="wUrl" placeholder="https://…">
+      <label for="wZoom">Zoom %</label><input id="wZoom" type="number" min="25" max="300" value="100">
+    </div>
+    <div data-pane="clock" hidden>
+      <label for="cLabel">Label under the time (optional)</label><input id="cLabel" maxlength="60">
+    </div>
+    <div class="two" style="margin-top:4px">
+      <div><label for="secs">For</label>
+        <select id="secs"><option value="30">30 seconds</option><option value="60" selected>1 minute</option><option value="120">2 minutes</option><option value="300">5 minutes</option><option value="900">15 minutes</option><option value="1800">30 minutes</option><option value="3600">1 hour</option></select></div>
+      <div style="display:flex; align-items:flex-end; gap:8px">
+        <button class="b pri" id="showBtn" style="flex:1">Show on TV</button>
+        <button class="b" data-act="resume" title="End the live item">Back to playlist</button>
+      </div>
+    </div>
+  </section>
+
+  <details>
+    <summary>Remote keys</summary>
+    <div class="in">
+      <div style="display:flex; gap:28px; flex-wrap:wrap; align-items:flex-start">
+        <div class="pad">
+          <span></span><button class="b" data-act="up">▲</button><span></span>
+          <button class="b" data-act="left">◀</button><button class="b" data-act="ok">OK</button><button class="b" data-act="right">▶</button>
+          <span></span><button class="b" data-act="down">▼</button><span></span>
+        </div>
+        <div class="row" style="max-width:340px">
+          <button class="b" data-act="back">Back</button>
+          <button class="b" data-act="home">Home</button>
+          <button class="b" data-act="key" data-args='{"keys":["KEY_SOURCE"]}'>Source</button>
+          <button class="b" data-act="key" data-args='{"keys":["KEY_MENU"]}'>Menu</button>
+          <button class="b" data-act="reload">Reload player</button>
+        </div>
+      </div>
+      <label for="rawKey">Any key (e.g. KEY_HDMI1, KEY_CHUP)</label>
+      <div style="display:flex; gap:8px"><input id="rawKey" class="mono" placeholder="KEY_…"><button class="b" id="rawBtn">Send</button></div>
+    </div>
+  </details>
+
+  <details id="appsBox">
+    <summary>Apps on this TV</summary>
+    <div class="in">
+      <p class="note">Shows each app's ID, which Screen Hub uses to launch it. Screen Hub's own ID is <span class="mono">RScreenHub.ScreenHub</span>.</p>
+      <button class="b" id="appsBtn">Load list</button>
+      <div class="apps" id="apps" hidden></div>
+    </div>
+  </details>
+
+  <details>
+    <summary>Screens and settings</summary>
+    <div class="in">
+      <div class="row" style="margin-bottom:6px"><button class="b" id="findBtn">Find TVs on the network</button></div>
+      <div class="two">
+        <div><label for="aName">Name</label><input id="aName" placeholder="lounge"></div>
+        <div><label for="aIp">IP address</label><input id="aIp" class="mono" placeholder="192.168.1.50"></div>
+      </div>
+      <label for="aMac">MAC address for switching on (optional, filled in automatically when the TV is on)</label>
+      <input id="aMac" class="mono" placeholder="AA:BB:CC:DD:EE:FF">
+      <div class="row" style="margin-top:10px"><button class="b" id="addBtn">Save TV</button><button class="b" id="defBtn">Make selected the default</button><button class="b" id="rmBtn">Forget selected</button></div>
+      <div id="tvTable" class="mono" style="margin-top:12px; color:var(--muted)"></div>
+    </div>
+  </details>
+
+  <details>
+    <summary>How it works</summary>
+    <div class="in note">
+      <p>This page runs on this PC only (127.0.0.1) and talks straight to the TVs over the home network, so it is instant but only works at home. Publishing from the console is unchanged.</p>
+      <p><b>First use:</b> the TV shows an Allow prompt for “Screen Hub Remote”. Press Allow with the TV remote. If you pressed Deny, allow it under Settings › General › External Device Manager › Device Connection Manager.</p>
+      <p><b>Switching on</b> uses Wake-on-LAN. On 2016 Samsungs it works when Samsung Instant On / network standby is on, and is most reliable on a wired connection. The page saves the TV's MAC address the first time it sees the TV switched on.</p>
+      <p><b>Show now</b> needs Screen Hub player 1.5.0. It starts Screen Hub if it isn't open, shows the item for the time you pick, then carries on with the playlist. The :00/:30 clock is skipped while it shows.</p>
+      <p>Saved TVs and connection tokens are in your user folder (.screenhub\tvremote.json), not in the repo.</p>
+    </div>
+  </details>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+  "use strict";
+  var CHANGELOG = [
+    { v:"1.0.0", d:"22 Oct 2026", t:"First release: power on/off, open Screen Hub, playlist and volume controls, Show now (message, YouTube, website, clock), remote keys, app list, find and save TVs." }
+  ];
+  var MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  var state = { tvs: [], sel: null, def: null, checked: null };
+  function $(id){ return document.getElementById(id); }
+  function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];}); }
+  function stamp(t){ var d=new Date(t*1000), p=function(n){return (n<10?"0":"")+n;};
+    var z=""; try{ z=new Intl.DateTimeFormat("en-GB",{timeZoneName:"short"}).formatToParts(d).filter(function(x){return x.type==="timeZoneName";})[0].value; }catch(e){}
+    return p(d.getDate())+" "+MON[d.getMonth()]+", "+p(d.getHours())+":"+p(d.getMinutes())+(z?" "+z:""); }
+  var toastT=null;
+  function toast(msg, bad){ var t=$("toast"); t.textContent=msg; t.className="toast on"+(bad?" bad":""); clearTimeout(toastT); toastT=setTimeout(function(){ t.className="toast"; }, bad?7000:3500); }
+  function api(path, body){
+    return fetch(path, body===undefined?{cache:"no-store"}:{method:"POST", headers:{"Content-Type":"application/json","X-Screen-Hub":"1"}, body:JSON.stringify(body)})
+      .then(function(r){ return r.json(); });
+  }
+
+  // pills
+  function bindPop(btn, pop){
+    btn.addEventListener("click", function(e){ e.stopPropagation(); var on=!pop.classList.contains("on");
+      document.querySelectorAll(".pop").forEach(function(p){p.classList.remove("on");}); document.querySelectorAll(".pill").forEach(function(b){b.setAttribute("aria-expanded","false");});
+      if(on){ pop.classList.add("on"); btn.setAttribute("aria-expanded","true"); } });
+  }
+  document.addEventListener("click", function(e){ if(!e.target.closest(".pop")){ document.querySelectorAll(".pop").forEach(function(p){p.classList.remove("on");}); } });
+  document.addEventListener("keydown", function(e){ if(e.key==="Escape") document.querySelectorAll(".pop").forEach(function(p){p.classList.remove("on");}); });
+  $("verPop").innerHTML = "<h3>Changelog</h3>" + CHANGELOG.map(function(c){ return '<div class="e"><span class="v">v'+esc(c.v)+'</span> <span class="d">'+esc(c.d)+'</span><div>'+esc(c.t)+'</div></div>'; }).join("");
+  bindPop($("verBtn"), $("verPop")); bindPop($("refBtn"), $("refPop"));
+  function renderRef(){
+    $("refBtn").textContent = state.checked ? "Updated " + stamp(state.checked) : "Not checked";
+    $("refPop").innerHTML = "<h3>Data sources</h3>" +
+      '<div class="e"><b>TV power state</b><div class="d">Asked of each TV over the network · '+(state.checked?esc(stamp(state.checked)):"not yet")+' · refreshes every 30 seconds</div></div>' +
+      '<div class="e"><b>Saved TVs</b><div class="d">This PC: .screenhub\\tvremote.json in your user folder</div></div>' +
+      '<div class="e"><button class="b" id="refNow">Check now</button></div>';
+    var rn=$("refNow"); if(rn) rn.onclick=function(e){ e.stopPropagation(); load(); };
+  }
+
+  // screens
+  function renderTvs(){
+    var box=$("tvs");
+    if(!state.tvs.length){ box.innerHTML='<span class="empty">No TVs saved yet. Open “Screens and settings” below and choose Find TVs.</span>'; $("tvTable").textContent=""; return; }
+    var all = state.tvs.length>1 ? '<button class="tv'+(state.sel==="all"?" sel":"")+'" data-tv="all"><span class="dot on"></span>All screens</button>' : "";
+    box.innerHTML = state.tvs.map(function(t){
+      var lbl={on:"On",standby:"Standby",off:"Off"}[t.state]||t.state;
+      return '<button class="tv'+(state.sel===t.name?" sel":"")+'" data-tv="'+esc(t.name)+'" title="'+esc(t.ip)+'"><span class="dot '+esc(t.state)+'"></span>'+esc(t.label)+' <small>'+esc(lbl)+(t.name===state.def?" · default":"")+'</small></button>';
+    }).join("") + all;
+    box.querySelectorAll(".tv").forEach(function(b){ b.onclick=function(){ state.sel=b.getAttribute("data-tv"); renderTvs(); }; });
+    $("tvTable").innerHTML = state.tvs.map(function(t){ return esc(t.name)+" · "+esc(t.ip)+" · "+esc(t.model||"model unknown")+" · MAC "+esc(t.mac||"not saved yet"); }).join("<br>");
+  }
+  function load(){
+    return api("/api/tvs").then(function(j){
+      state.tvs=j.tvs||[]; state.def=j.default; state.checked=j.checked;
+      if(!state.sel || (state.sel!=="all" && !state.tvs.some(function(t){return t.name===state.sel;}))) state.sel = state.def || (state.tvs[0] && state.tvs[0].name) || null;
+      renderTvs(); renderRef();
+    }).catch(function(){ toast("Can't reach the remote tool. Is tvremote.py ui still running?", true); });
+  }
+
+  // actions
+  function act(action, args, btn){
+    if(!state.sel){ toast("Pick a screen first", true); return Promise.resolve(); }
+    if(btn) btn.disabled=true;
+    return api("/api/do", {tv:state.sel, action:action, args:args||{}}).then(function(j){
+      var r=j.results||[], bad=r.some(function(x){return !x.ok;});
+      var msgs=r.map(function(x){ return Array.isArray(x.msg) ? (x.msg.length+" apps") : x.msg; });
+      toast(msgs.join("\n")||"Done", bad);
+      if(action==="on"||action==="off") setTimeout(load, action==="on"?8000:4000);
+      return r;
+    }).catch(function(){ toast("Can't reach the remote tool", true); }).then(function(r){ if(btn) btn.disabled=false; return r; });
+  }
+  document.querySelectorAll("[data-act]").forEach(function(b){
+    b.addEventListener("click", function(){ var a=b.getAttribute("data-args"); act(b.getAttribute("data-act"), a?JSON.parse(a):{}, b); });
+  });
+  $("rawBtn").onclick=function(){ var k=$("rawKey").value.trim().toUpperCase(); if(!k) return; if(k.indexOf("KEY_")!==0) k="KEY_"+k; act("key",{keys:[k]},$("rawBtn")); };
+
+  // show now
+  var tab="say";
+  document.querySelectorAll(".tab").forEach(function(t){ t.onclick=function(){ tab=t.getAttribute("data-tab");
+    document.querySelectorAll(".tab").forEach(function(x){x.classList.toggle("on",x===t);});
+    document.querySelectorAll("[data-pane]").forEach(function(p){ p.hidden = p.getAttribute("data-pane")!==tab; }); }; });
+  function ytId(s){ s=String(s||"").trim(); var m=/(?:v=|youtu\.be\/|embed\/|shorts\/|live\/)([A-Za-z0-9_-]{11})/.exec(s); if(m) return m[1]; return /^[A-Za-z0-9_-]{11}$/.test(s)?s:""; }
+  $("showBtn").onclick=function(){
+    var secs=Number($("secs").value), b=$("showBtn");
+    if(tab==="say"){ var t=$("sTitle").value.trim(); if(!t){ toast("Add a headline", true); return; }
+      act("say",{title:t, body:$("sBody").value.trim(), kicker:$("sKick").value.trim(), theme:$("sTheme").value, seconds:secs}, b); }
+    else if(tab==="youtube"){ var id=ytId($("yId").value); if(!id){ toast("That doesn't look like a YouTube link", true); return; }
+      if($("yWhere").value==="app") act("youtube-app",{video:id}, b); else act("youtube",{video:id, sound:$("ySound").value==="1", seconds:secs}, b); }
+    else if(tab==="web"){ var u=$("wUrl").value.trim(); if(!/^https?:\/\//i.test(u)){ toast("Use a full address starting https://", true); return; }
+      act("web",{url:u, zoom:Number($("wZoom").value)||100, seconds:secs}, b); }
+    else act("clock",{label:$("cLabel").value.trim(), seconds:secs}, b);
+  };
+
+  // apps
+  $("appsBtn").onclick=function(){
+    if(!state.sel||state.sel==="all"){ toast("Pick one screen to list its apps", true); return; }
+    act("apps",{}, $("appsBtn")).then(function(r){
+      var x=r&&r[0]; if(!x||!x.ok||!Array.isArray(x.msg)) return;
+      var box=$("apps"); box.hidden=false;
+      box.innerHTML = x.msg.map(function(a){ return '<div><span>'+esc(a.name)+'</span><span class="mono">'+esc(a.id)+'</span></div>'; }).join("") || '<div>No apps reported</div>';
+    });
+  };
+
+  // settings
+  $("findBtn").onclick=function(){ var b=$("findBtn"); b.disabled=true; b.textContent="Searching… (about 10 seconds)";
+    api("/api/find",{}).then(function(j){ toast(j.msg||"Done"); return load(); }).catch(function(){ toast("Search failed", true); }).then(function(){ b.disabled=false; b.textContent="Find TVs on the network"; }); };
+  $("addBtn").onclick=function(){ api("/api/add",{name:$("aName").value.trim(), ip:$("aIp").value.trim(), mac:$("aMac").value.trim()}).then(function(j){
+    if(j.results){ toast(j.results[0].msg, true); return; } toast("Saved"); load(); }); };
+  $("defBtn").onclick=function(){ if(!state.sel||state.sel==="all") return; api("/api/default",{name:state.sel}).then(load); };
+  $("rmBtn").onclick=function(){ if(!state.sel||state.sel==="all") return; if(!confirm("Forget "+state.sel+"?")) return; api("/api/remove",{name:state.sel}).then(function(){ state.sel=null; load(); }); };
+
+  renderRef(); load(); setInterval(load, 30000);
+})();
+</script>
+</body>
+</html>

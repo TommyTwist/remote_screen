@@ -76,8 +76,13 @@
     });
   }
 
+  function newer(a, b) { // true if version string a is newer than b
+    var x = String(a || "0").split("."), y = String(b || "0").split("."), i;
+    for (i = 0; i < 3; i++) { var p = parseInt(x[i] || 0, 10), q = parseInt(y[i] || 0, 10); if (p !== q) return p > q; }
+    return false;
+  }
   function start() {
-    status("Starting Screen Hub…");
+    status("Starting Screen Hub… (loader " + LOADER_VERSION + ")");
     fetchPackage(BASE, true, function (err, pkg) {
       if (!err) {
         try { window.localStorage.setItem(CACHE_KEY, JSON.stringify(pkg)); } catch (e) {}
@@ -85,10 +90,18 @@
         bootBundled("update didn't start");
         return;
       }
+      // GitHub unreachable: use whichever of the saved copy and the built-in copy is newer
+      status("Couldn't reach GitHub (" + err + "). Using the copy on this TV…");
       var cached = null;
       try { cached = JSON.parse(window.localStorage.getItem(CACHE_KEY) || "null"); } catch (e) {}
-      if (cached && boot(cached, "saved copy (" + err + ")")) return;
-      bootBundled(err);
+      fetchPackage("bundled/", false, function (berr, bpkg) {
+        var cv = cached && cached.manifest && cached.manifest.version, bv = bpkg && bpkg.manifest && bpkg.manifest.version;
+        if (cached && (berr || newer(cv, bv))) {
+          if (boot(cached, "saved copy " + cv + " (GitHub: " + err + ")")) return;
+        }
+        if (berr) { fatal("Couldn't reach GitHub (" + err + ") and couldn't load the built-in player (" + berr + ")."); return; }
+        if (!boot(bpkg, "built-in copy " + bv + " (GitHub: " + err + ")")) fatal("Couldn't reach GitHub (" + err + ") and the built-in player didn't start.");
+      });
     });
   }
   window.onload = start;

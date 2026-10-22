@@ -57,4 +57,4 @@ Anything pushed to `main` under `player/` or `apps/` runs on the TVs, so keep pu
 ## Install (once per TV)
 
 Same route as Fuel Watch: in Apps2Samsung choose **Custom WGT / TPK**, pick `ScreenHub-1.0.0.wgt`, **Download & Install**.
-Open Screen Hub on the TV: it shows a Screen ID and pairing code. Add both in the console.
+Open Screen Hub on the TV: it shows a QR code, a Screen ID and a pairing code. In the console choose **Pair a new screen › Scan QR code** and photograph the QR code, or type both codes in.

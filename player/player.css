@@ -96,3 +96,17 @@ body{color:#e8edf5; font-family:"Plus Jakarta Sans","Samsung One","Tizen Sans",s
 /* time check clock (v1.1.0): above the playlist, below night/lock/overlays */
 #chime{position:absolute; left:0; top:0; width:1920px; height:1080px; display:none; z-index:15;}
 #chime.on{display:block;}
+
+/* pairing card with QR (v1.2.0): text on the left, QR tile on the right. 1280 x 572. */
+.welcome.pair{width:1280px; height:572px; padding:56px 60px;}
+.welcome.pair .pt{width:680px;}
+.welcome.pair .f{font-size:26px; margin-top:22px; color:#a7b2c1;}
+.welcome.pair .f b{color:#e8edf5; font-weight:700;}
+.welcome.pair .d{margin-top:34px;}
+.welcome.pair .pk{margin-top:10px; white-space:nowrap;}
+.welcome.pair .pk .k{display:inline-block; width:170px; font-size:19px; text-transform:uppercase; letter-spacing:.08em; font-weight:700; color:#5b6676;}
+.welcome.pair .pk .v{font-family:"JetBrains Mono","Courier New",monospace; font-size:36px; font-weight:700; color:#c9d1dc; letter-spacing:.03em;}
+.welcome.pair .pk .v.code{color:#f0bd52;}
+.welcome.pair .clk{position:absolute; left:60px; bottom:48px; margin:0;}
+.welcome .qr{position:absolute; right:56px; top:56px; width:460px; height:460px; border-radius:22px; background:#ffffff; padding:20px;}
+.welcome .qr canvas{display:block;}

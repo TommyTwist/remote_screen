@@ -20,6 +20,7 @@
   var sjcl = window.sjcl;
 
   var CHANGELOG = [
+    { v: "1.2.0", d: "22 Oct 2026", t: "Pairing by QR code: the pairing card shows a QR code to scan from the Screen Hub console on a phone. The Screen ID and code are still shown underneath for typing in." },
     { v: "1.1.0", d: "22 Oct 2026", t: "Time check: a full-screen clock on the hour and half hour for 15 seconds, skipped while someone is using the remote. On by default; switch per screen in the console." },
     { v: "1.0.0", d: "22 Oct 2026", t: "First release: pairing codes and per-screen encryption; playlists of pictures, videos, YouTube, web pages, apps, messages and a clock; schedules; night mode; remote commands." }
   ];
@@ -546,11 +547,58 @@
     var el = $("lock");
     if (access === "blocked") el.innerHTML = card("This screen has been switched off", "Switch it back on in the Screen Hub console. It checks again every few minutes.", false);
     else if (access === "offline") el.innerHTML = card("Can't reach the internet", "Screen Hub will keep trying. Check the TV's network connection.", false);
-    else el.innerHTML = card("Pair this screen", "In the Screen Hub console, choose Add screen and enter this Screen ID and pairing code. Content appears within a few minutes of the next publish.", true);
+    else if (hasQr()) { el.innerHTML = pairCard(); drawQr($("pairQr")); }
+    else el.innerHTML = card("Pair this screen", "In the Screen Hub console, choose Pair a new screen and enter this Screen ID and pairing code. Content appears within a few minutes of the next publish.", true);
     el.className = "on";
     moveCard2();
   }
-  function moveCard2() { var w = $("lock").querySelector(".welcome"); if (!w) return; w.style.left = (120 + Math.round(Math.random() * 760)) + "px"; w.style.top = (60 + Math.round(Math.random() * 140)) + "px"; }
+  function moveCard2() {
+    var w = $("lock").querySelector(".welcome"); if (!w) return;
+    if (/\bpair\b/.test(w.className)) {
+      // 1280 x 572 card: keep it on the 1920 x 1080 stage with a margin, drifting against burn-in
+      w.style.left = (80 + Math.round(Math.random() * 480)) + "px";
+      w.style.top = (60 + Math.round(Math.random() * 380)) + "px";
+    } else {
+      w.style.left = (120 + Math.round(Math.random() * 760)) + "px";
+      w.style.top = (60 + Math.round(Math.random() * 140)) + "px";
+    }
+  }
+
+  // ---------- pairing QR (v1.2.0) ----------
+  // The console scans this to add the screen. Payload: SCREENHUB:1:<Screen ID>:<pairing code>
+  // It carries the same two values the card prints, nothing else.
+  function pairPayload() { return "SCREENHUB:1:" + screenId + ":" + pairCode; }
+  function hasQr() { return typeof window.qrcode === "function" && !!screenId && !!pairCode; }
+  function drawQr(box) {
+    if (!box) return;
+    try {
+      var q = window.qrcode(0, "M");
+      q.addData(pairPayload());
+      q.make();
+      var n = q.getModuleCount(), quiet = 4, cell = Math.floor(400 / (n + quiet * 2)), size = cell * (n + quiet * 2);
+      var cv = document.createElement("canvas");
+      cv.width = size; cv.height = size;
+      var g = cv.getContext("2d"), r, c;
+      g.fillStyle = "#ffffff"; g.fillRect(0, 0, size, size);
+      g.fillStyle = "#05080d";
+      for (r = 0; r < n; r++) for (c = 0; c < n; c++) if (q.isDark(r, c)) g.fillRect((c + quiet) * cell, (r + quiet) * cell, cell, cell);
+      cv.style.marginTop = cv.style.marginLeft = Math.floor((420 - size) / 2) + "px";
+      box.innerHTML = "";
+      box.appendChild(cv);
+    } catch (e) {
+      box.parentNode && box.parentNode.removeChild(box);
+    }
+  }
+  function pairCard() {
+    return '<div class="welcome pair" id="welcome">' +
+      '<div class="pt"><div class="t">Screen Hub</div><div class="h">Pair this screen</div>' +
+      '<div class="f">On your phone, open the Screen Hub console, choose <b>Pair a new screen</b> then <b>Scan QR code</b>, and point the camera at this code.</div>' +
+      '<div class="d">Or type these in</div>' +
+      '<div class="pk"><span class="k">Screen ID</span><span class="v">' + esc(screenId || "…") + '</span></div>' +
+      '<div class="pk"><span class="k">Code</span><span class="v code">' + esc(prettyCode(pairCode)) + '</span></div>' +
+      '<div class="clk" id="idleClock">' + hhmm(new Date()) + '</div></div>' +
+      '<div class="qr" id="pairQr"></div></div>';
+  }
   function hideLock() { $("lock").className = ""; }
   function stopAll() {
     if (pending) { clearLayer(layers[pending.layer]); pending = null; }

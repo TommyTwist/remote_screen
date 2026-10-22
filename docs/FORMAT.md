@@ -12,6 +12,13 @@ and keeps it in its own storage. Its Screen ID is the TV's Samsung DUID (first w
     fileId = hex(SHA-256("rs1|file|" + ID + "|" + CODE))[0:32]
     aad    = SHA-256("rs1|aad|"  + fileId)[0:16]
 
+An unpaired TV's pairing card also shows a QR code (player 1.2.0+) holding the same two values as text:
+
+    SCREENHUB:1:<Screen ID>:<CODE>
+
+The console reads it from a photo and fills in the Screen ID and code. It is no more secret than the printed
+code beside it: anyone who can see the TV's pairing card can read both.
+
 ## `s/<fileId>.json` — one per paired screen
 
     {"v":1, "h":"<change hash>", "iv":"<base64 12 bytes>", "ct":"<base64 AES-GCM ciphertext+tag>"}

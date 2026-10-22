@@ -40,6 +40,11 @@ body{color:#e8edf5; font-family:"Plus Jakarta Sans","Samsung One","Tizen Sans",s
 .clock .box{position:absolute; left:0; top:0; width:1920px; text-align:center; z-index:3;}
 .clock .tm{font-family:"JetBrains Mono","Courier New",monospace; font-size:260px; font-weight:600; color:#eef3f9; letter-spacing:-.02em; line-height:1;
   text-shadow:0 6px 40px rgba(2,6,14,.55);}
+/* flashing colon (v1.5.1): on for half a second, dim for half a second */
+.clock .tm .col{display:inline-block;
+  -webkit-animation:rsBlink 1s step-end infinite; animation:rsBlink 1s step-end infinite;}
+@-webkit-keyframes rsBlink{0%{opacity:1;} 50%{opacity:.12;} 100%{opacity:1;}}
+@keyframes rsBlink{0%{opacity:1;} 50%{opacity:.12;} 100%{opacity:1;}}
 .clock .dt{font-size:54px; font-weight:600; color:#b4c2d3; margin-top:24px; text-shadow:0 3px 18px rgba(2,6,14,.6);}
 .clock .lbl{font-size:30px; color:#8796a8; margin-top:18px;}
 

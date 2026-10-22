@@ -23,6 +23,7 @@
     (window.PalmSystem || window.PalmServiceBridge || /Web0S|webOS/i.test(navigator.userAgent)) ? "webos" : "web";
 
   var CHANGELOG = [
+    { v: "1.5.1", d: "22 Oct 2026", t: "Clock screen: the colon between the hours and minutes flashes once a second, like a digital clock." },
     { v: "1.5.0", d: "22 Oct 2026", t: "Samsung: instant control from the PC. The TV Remote tool on the home network can show a message, clock, YouTube video or web page straight away for a set time, then the playlist carries on. It can also skip, identify or reload a screen without waiting for a publish." },
     { v: "1.4.0", d: "22 Oct 2026", t: "Clock screen: the clock (in playlists and the :00/:30 time check) now sits on a slowly flowing background of soft blue, teal and green light. Night mode's dim clock is unchanged." },
     { v: "1.3.0", d: "22 Oct 2026", t: "LG TVs: the player now runs on LG webOS as well as Samsung. LG screens get a Screen ID starting LG-, show their model in the status panel, and the remote's BACK button closes the app. Nothing changes on Samsung screens." },
@@ -553,7 +554,12 @@
   function tickClock(node, move) {
     var d = new Date(), box = node && node.querySelector ? node.querySelector(".box") : null;
     if (!box) return;
-    box.querySelector(".tm").textContent = hhmm(d);
+    // HH:MM with the colon in its own span so it can blink each second; only rebuilt when the minute changes
+    var tm = box.querySelector(".tm"), hm = hhmm(d);
+    if (tm.getAttribute("data-t") !== hm) {
+      tm.setAttribute("data-t", hm);
+      tm.innerHTML = pad(d.getHours()) + '<span class="col">:</span>' + pad(d.getMinutes());
+    }
     box.querySelector(".dt").textContent = longDate(d);
     if (move || d.getSeconds() === 0) {
       box.style.top = (300 + Math.round(Math.random() * 160 - 80)) + "px";

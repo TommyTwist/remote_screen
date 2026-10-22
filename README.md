@@ -1,6 +1,6 @@
 # Screen Hub
 
-Remote-managed content for Samsung (Tizen) TVs. Install one small app on each TV once; after that,
+Remote-managed content for Samsung (Tizen) and LG (webOS) TVs. Install one small app on each TV once; after that,
 what every screen shows is set from the **Screen Hub console** (a private claude.ai page) and published
 here by an hourly sync.
 
@@ -38,6 +38,7 @@ An app is one self-contained HTML file; the player writes it into a frame and pa
 
 - **◀ ▶** previous / next · **OK** pause (resumes after 5 minutes untouched) · **▲ / INFO** status panel
   (name, ID, pairing code, now/next, last check) · **RED** identify · **BACK** close / exit
+  (same on LG; the Magic Remote's arrows, OK, BACK and colour keys all work)
 - Checks for changes every 3 minutes. Night hours show a dim drifting clock or a black screen; any button wakes it for 10 minutes.
 - Remote commands from the console: identify, skip to next, show an item now, reload.
 
@@ -45,6 +46,9 @@ An app is one self-contained HTML file; the player writes it into a frame and pa
 
 ```
 loader/         The installed package (config.xml, loader, icon, bundled copy of the player)
+loader/webos/   LG extras: appinfo.json and icons (the loader and player are shared)
+tools/build-wgt.sh  Builds the Samsung package -> dist/ScreenHub-<v>.wgt
+tools/build-ipk.py  Builds the LG package -> dist/ScreenHub-LG-<v>.ipk (no LG SDK needed)
 player/         The player the TVs fetch on start: bump player/manifest.json "version" to roll out
 apps/           Apps that can go in a playlist
 tools/publish.py  Encrypts the console's export into s/ and m/ (run by the hourly sync)
@@ -56,5 +60,27 @@ Anything pushed to `main` under `player/` or `apps/` runs on the TVs, so keep pu
 
 ## Install (once per TV)
 
-Same route as Fuel Watch: in Apps2Samsung choose **Custom WGT / TPK**, pick `ScreenHub-1.0.0.wgt`, **Download & Install**.
+### Samsung
+
+Same route as Fuel Watch: in Apps2Samsung (or ScreenHubInstaller) choose **Custom WGT / TPK**, pick `ScreenHub-<version>.wgt`, **Download & Install**.
+
+### LG (webOS 3 and newer)
+
+LG's own Developer Mode is the supported way to sideload. One-off setup:
+
+1. Make a free LG Developer account at developer.lge.com (it uses an LG account).
+2. On the TV, install **Developer Mode** from the LG Content Store, sign in, switch **Dev Mode Status** on (the TV restarts), then reopen it and switch **Key Server** on.
+3. On the PC (same network), install **webOS Dev Manager** (github.com/webosbrew/dev-manager-desktop), add the TV by its IP address and accept the passphrase shown in the Developer Mode app. Give the TV a fixed IP on the router so it stays findable.
+4. In Dev Manager open **Apps**, choose **Install** and pick `ScreenHub-LG-<version>.ipk`. Or with LG's CLI: `ares-install -d <tv> ScreenHub-LG-<version>.ipk`.
+
+Things to know about LG Developer Mode:
+
+- Dev Mode lasts 1000 hours (about 41 days). When it runs out, sideloaded apps are removed. Open the Developer Mode app and press **Extend** before then (Dev Manager shows the time left).
+- The Key Server switches off when the TV restarts; that only matters when you next connect from the PC.
+- One developer account can have Dev Mode on one TV at a time.
+- Screen IDs on LG start `LG-` and come from the TV's own unique ID, saved on first start so pairing survives restarts.
+
+
+### Pairing
+
 Open Screen Hub on the TV: it shows a QR code, a Screen ID and a pairing code. In the console choose **Pair a new screen › Scan QR code** and photograph the QR code, or type both codes in.

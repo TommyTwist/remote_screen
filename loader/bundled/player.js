@@ -1,4 +1,4 @@
-/* Screen Hub player — runs on Samsung Tizen TVs (2016 Tizen 2.4 WebKit and newer).
+/* Screen Hub player — runs on Samsung Tizen TVs (2016 Tizen 2.4 WebKit and newer) and LG webOS TVs.
    ES5 only. Loaded by the installed loader from player/ in TommyTwist/remote_screen.
 
    Privacy: the repo is public, but nothing in it is readable without a screen's key.
@@ -18,8 +18,12 @@
   var REPO_RAW = CFG.REPO_RAW || "https://raw.githubusercontent.com/TommyTwist/remote_screen/main/";
   var MANIFEST_URL = CFG.MANIFEST_URL || REPO_RAW + "player/manifest.json";
   var sjcl = window.sjcl;
+  // Which TV we're on: Samsung (Tizen), LG (webOS) or a plain browser
+  var PLATFORM = window.tizen ? "tizen" :
+    (window.PalmSystem || window.PalmServiceBridge || /Web0S|webOS/i.test(navigator.userAgent)) ? "webos" : "web";
 
   var CHANGELOG = [
+    { v: "1.3.0", d: "22 Oct 2026", t: "LG TVs: the player now runs on LG webOS as well as Samsung. LG screens get a Screen ID starting LG-, show their model in the status panel, and the remote's BACK button closes the app. Nothing changes on Samsung screens." },
     { v: "1.2.2", d: "22 Oct 2026", t: "Never a black screen: a Starting up card shows straight away, and if the player can't get going within 25 seconds the TV shows a report of what went wrong (version, browser and any errors) instead of staying dark." },
     { v: "1.2.1", d: "22 Oct 2026", t: "Fix: some TVs showed a blank screen instead of the pairing card. The card now always shows first with the Screen ID and code; the QR code is added on top only if the TV can draw it, as a plain image." },
     { v: "1.2.0", d: "22 Oct 2026", t: "Pairing by QR code: the pairing card shows a QR code to scan from the Screen Hub console on a phone. The Screen ID and code are still shown underneath for typing in." },
@@ -144,19 +148,52 @@
     return s;
   }
   function prettyCode(c) { return c.slice(0, 4) + "-" + c.slice(4, 8) + "-" + c.slice(8, 12) + "-" + c.slice(12, 16); }
+  // LG webOS system call without webOSTV.js (the same bridge webOSTV.js uses)
+  var lunaBridges = [];
+  function luna(uri, params, cb) {
+    var done = false, b;
+    function fin(r) { if (!done) { done = true; cb(r); } }
+    try {
+      b = new window.PalmServiceBridge();
+      lunaBridges.push(b); // keep a reference until it answers
+      b.onservicecallback = function (msg) { var r = null; try { r = JSON.parse(msg); } catch (e) {} fin(r); };
+      b.call(uri, JSON.stringify(params || {}));
+    } catch (e) { fin(null); return; }
+    setTimeout(function () { fin(null); }, 4000);
+  }
+  function finishId(cb) {
+    if (screenId) screenId = screenId.toUpperCase().replace(/[^A-Z0-9_\-]/g, "");
+    if (!screenId) {
+      screenId = lsGet("rs.screenId");
+      if (!screenId) { screenId = "WEB-" + makeCode().slice(0, 6); lsSet("rs.screenId", screenId); }
+    }
+    pairCode = lsGet("rs.pairCode");
+    if (!pairCode || !/^[A-Z2-9]{16}$/.test(pairCode)) { pairCode = makeCode(); lsSet("rs.pairCode", pairCode); }
+    deriveKeys();
+    cb();
+  }
+  function resolveIdWebos(cb) {
+    // Keep the first ID this TV was given so pairing never breaks, even if the system call fails later.
+    var saved = lsGet("rs.screenId");
+    luna("luna://com.webos.service.tv.systemproperty/getSystemInfo", { keys: ["modelName", "firmwareVersion", "sdkVersion"] }, function (r) {
+      if (r && r.modelName) screenModel = "LG " + r.modelName + (r.sdkVersion ? " · webOS " + r.sdkVersion : "");
+      else screenModel = "LG webOS";
+      if (saved) { screenId = saved; finishId(cb); return; }
+      luna("luna://com.webos.service.sm/deviceid/getIDs", { idType: ["LGUDID"] }, function (d) {
+        var v = "", i, l = d && d.idList || [];
+        for (i = 0; i < l.length; i++) if (l[i] && l[i].idType === "LGUDID") v = String(l[i].idValue || "");
+        v = v.toUpperCase().replace(/[^A-Z0-9]/g, "");
+        if (v) { screenId = "LG-" + v.slice(0, 16); lsSet("rs.screenId", screenId); }
+        finishId(cb);
+      });
+    });
+  }
   function resolveId(cb) {
+    if (PLATFORM === "webos") { resolveIdWebos(cb); return; }
     loadScript("$WEBAPIS/webapis/webapis.js", function () {
       try { screenId = String(window.webapis.productinfo.getDuid() || "").split(/\s+/)[0] || null; } catch (e) {}
       try { screenModel = window.webapis.productinfo.getRealModel() || window.webapis.productinfo.getModel() || ""; } catch (e) {}
-      if (screenId) screenId = screenId.toUpperCase().replace(/[^A-Z0-9_\-]/g, "");
-      if (!screenId) {
-        screenId = lsGet("rs.screenId");
-        if (!screenId) { screenId = "WEB-" + makeCode().slice(0, 6); lsSet("rs.screenId", screenId); }
-      }
-      pairCode = lsGet("rs.pairCode");
-      if (!pairCode || !/^[A-Z2-9]{16}$/.test(pairCode)) { pairCode = makeCode(); lsSet("rs.pairCode", pairCode); }
-      deriveKeys();
-      cb();
+      finishId(cb);
     });
   }
   function deriveKeys() {
@@ -674,8 +711,17 @@
   }
 
   // ---------- remote keys ----------
+  function exitApp() {
+    if (PLATFORM === "webos") {
+      try { if (window.webOS && window.webOS.platformBack) { window.webOS.platformBack(); return; } } catch (x) {}
+      try { window.close(); } catch (x) {}
+      return;
+    }
+    try { window.tizen.application.getCurrentApplication().exit(); } catch (x) {}
+  }
   function registerKeys() {
-    var keys = ["MediaPlayPause", "MediaPlay", "MediaPause", "MediaFastForward", "MediaRewind", "Info", "ColorF0Red"], i;
+    if (PLATFORM !== "tizen") return; // LG sends media/colour keys without registering
+    var keys =["MediaPlayPause", "MediaPlay", "MediaPause", "MediaFastForward", "MediaRewind", "Info", "ColorF0Red"], i;
     for (i = 0; i < keys.length; i++) { try { window.tizen.tvinputdevice.registerKey(keys[i]); } catch (e) {} }
   }
   function setPaused(v) {
@@ -692,7 +738,7 @@
     var kc = e.keyCode;
     if ($("ident").className === "on") { $("ident").className = ""; e.preventDefault(); return; }
     if (chimeOn) { endChime(); e.preventDefault(); return; }
-    if (nightOn && kc !== 10009 && kc !== 38 && kc !== 457) { nightOverrideUntil = now() + 10 * 60 * 1000; setNight(false); e.preventDefault(); return; }
+    if (nightOn && kc !== 10009 && kc !== 461 && kc !== 38 && kc !== 457) { nightOverrideUntil = now() + 10 * 60 * 1000; setNight(false); e.preventDefault(); return; }
     switch (kc) {
       case 37: case 412: if (pending) { clearLayer(layers[pending.layer]); pending = null; } advance(-1); break;
       case 39: case 417: if (pending) { clearLayer(layers[pending.layer]); pending = null; } advance(1); break;
@@ -702,9 +748,9 @@
       case 38: case 457: toggleInfo(); break;
       case 40: toggleInfo(false); break;
       case 403: identify(); break;
-      case 10009:
+      case 10009: case 461: // BACK: Samsung, LG
         if ($("info").className === "on") { toggleInfo(false); break; }
-        try { window.tizen.application.getCurrentApplication().exit(); } catch (x) {}
+        exitApp();
         break;
       default: return;
     }
@@ -809,7 +855,7 @@
   }
   window.RS_PLAYER = {
     version: VERSION, changelog: CHANGELOG,
-    state: function () { return { screenId: screenId, fileId: fileId, access: access, playing: current && current.p.id, paused: paused, night: nightOn, items: playlist.length, lastError: lastError, subtle: subtleOk }; }
+    state: function () { return { platform: PLATFORM, screenId: screenId, fileId: fileId, access: access, playing: current && current.p.id, paused: paused, night: nightOn, items: playlist.length, lastError: lastError, subtle: subtleOk }; }
   };
   start();
 })();

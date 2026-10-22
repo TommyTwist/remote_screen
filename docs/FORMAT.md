@@ -6,7 +6,7 @@ holds the matching pairing code can read it.
 ## Pairing
 
 On first start each TV makes a 16-character pairing code (alphabet `ABCDEFGHJKLMNPQRSTUVWXYZ23456789`)
-and keeps it in its own storage. Its Screen ID is the TV's Samsung DUID (first word, upper case).
+and keeps it in its own storage. Its Screen ID is the TV's Samsung DUID (first word, upper case), or on LG webOS `LG-` plus the first 16 characters of the TV's LGUDID (letters and digits only, upper case; saved on first start).
 
     key    = SHA-256("rs1|key|"  + ID + "|" + CODE)                 32 bytes, AES-256 key
     fileId = hex(SHA-256("rs1|file|" + ID + "|" + CODE))[0:32]

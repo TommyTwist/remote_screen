@@ -1,9 +1,10 @@
-/* Screen Hub loader v1.0.1 — the only part installed on the TV.
+/* Screen Hub loader v1.1.0 — the only part installed on the TV (Samsung Tizen .wgt and LG webOS .ipk share it).
    Fetches the player from player/ in TommyTwist/remote_screen, keeps the last good copy,
    and falls back to the copy bundled in this package. ES5 only. */
 (function () {
   "use strict";
-  var LOADER_VERSION = "1.0.2";
+  var LOADER_VERSION = "1.1.0";
+  var PLATFORM = window.tizen ? "tizen" : (window.PalmSystem || window.PalmServiceBridge || /Web0S|webOS/i.test(navigator.userAgent)) ? "webos" : "web";
   var BASE = "https://raw.githubusercontent.com/TommyTwist/remote_screen/main/player/";
   var CACHE_KEY = "rs.playerCache";
 
@@ -47,7 +48,7 @@
   }
 
   function boot(pkg, source) {
-    window.RS_BOOT = { manifest: pkg.manifest, source: source, loaderVersion: LOADER_VERSION, loadedAt: new Date().toString() };
+    window.RS_BOOT = { manifest: pkg.manifest, source: source, loaderVersion: LOADER_VERSION, platform: PLATFORM, loadedAt: new Date().toString() };
     window.RS_ALIVE = false;
     document.body.innerHTML = pkg.html;
     var st = document.createElement("style");
@@ -67,7 +68,7 @@
     document.body.innerHTML = '<div style="position:absolute;left:90px;right:90px;top:120px;color:#e8edf5;font-size:30px;line-height:1.5">' +
       '<div style="font-size:46px;font-weight:bold;margin-bottom:20px">Screen Hub couldn\'t start</div>' +
       String(t).replace(/</g, "&lt;") + '<br><span style="color:#f0bd52;font-size:22px">' + bootErrs.join("<br>").replace(/<(?!br>)/g, "&lt;") +
-      '</span><br><span style="color:#8a95a5;font-size:20px">Loader ' + LOADER_VERSION + ' · ' + String(navigator.userAgent).replace(/</g, "&lt;") + '</span></div>';
+      '</span><br><span style="color:#8a95a5;font-size:20px">Loader ' + LOADER_VERSION + ' (' + PLATFORM + ') · ' + String(navigator.userAgent).replace(/</g, "&lt;") + '</span></div>';
   }
   function bootBundled(why) {
     fetchPackage("bundled/", false, function (err, pkg) {

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>Fuel Watch</title>
+<style>html,body{margin:0;width:1920px;height:1080px;overflow:hidden;background:#0b1220;color:#5b6676;font-family:sans-serif}#w{position:absolute;top:48%;width:100%;text-align:center;font-size:28px}</style>
+</head>
+<body>
+<div id="w">Loading Fuel Watch…</div>
+<script>
+/* Screen Hub app: runs the Fuel Watch TV app (TommyTwist/fuel-watch-feed, app/) inside a
+   Screen Hub playlist. Screen Hub handles night mode, pictures and access, so the app's
+   own versions of those are switched off here. Options (from the console):
+   rotateSeconds — page change interval (default 30). */
+(function () {
+  var BASE = "https://raw.githubusercontent.com/TommyTwist/fuel-watch-feed/main/app/";
+  var opts = (window.RS_APP && window.RS_APP.options) || {};
+  function get(u, ok, fail) {
+    var x = new XMLHttpRequest(); x.open("GET", u + (u.indexOf("?") < 0 ? "?" : "&") + "t=" + new Date().getTime(), true); x.timeout = 15000;
+    x.onreadystatechange = function () { if (x.readyState === 4) { if (x.status >= 200 && x.status < 300) ok(x.responseText); else fail(); } };
+    x.ontimeout = fail; x.send();
+  }
+  function fail() { document.getElementById("w").textContent = "Fuel Watch couldn't load."; }
+  get(BASE + "manifest.json", function (mt) {
+    var m; try { m = JSON.parse(mt); } catch (e) { fail(); return; }
+    var c = m.config || {}, k, cfg = {};
+    for (k in c) if (c.hasOwnProperty(k)) cfg[k] = c[k];
+    cfg.APP_VERSION = m.version;
+    var none = "https://raw.githubusercontent.com/TommyTwist/remote_screen/main/apps/fuel-watch/none.json";
+    cfg.SCREENS_URL = none;        // no Fuel Watch access list or slides inside Screen Hub
+    cfg.MANIFEST_URL = none;       // Screen Hub reloads the app each time it's shown
+    cfg.NIGHT_START = 0; cfg.NIGHT_END = 0; cfg.AMBIENT_AFTER_MINUTES = 0;
+    if (opts.rotateSeconds) cfg.ROTATE_SECONDS = Math.max(10, Math.min(600, Number(opts.rotateSeconds) || 30));
+    window.FUELWATCH_CONFIG = cfg;
+    window.FW_LOADER = { source: "Screen Hub", version: "app wrapper 1.0.0" };
+    var f = m.files || {}, got = {}, left = 3;
+    function one(key, name) { get(BASE + name, function (t) { got[key] = t; if (--left === 0) run(); }, fail); }
+    one("html", f.html || "app.html"); one("css", f.css || "app.css"); one("js", f.js || "app.js");
+    function run() {
+      document.body.innerHTML = got.html;
+      var st = document.createElement("style"); st.textContent = got.css; document.head.appendChild(st);
+      var sc = document.createElement("script"); sc.text = got.js; document.body.appendChild(sc);
+    }
+  }, fail);
+})();
+</script>
+</body>
+</html>

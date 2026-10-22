@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>Local news</title>
+<style>
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap");
+*{box-sizing:border-box}
+html,body{margin:0;width:1920px;height:1080px;overflow:hidden;background:#0b1220;color:#e8edf5;font-family:"Plus Jakarta Sans","Samsung One","Tizen Sans",sans-serif}
+#s{position:absolute;left:0;top:0;width:1920px;height:1080px;padding:56px 96px 48px;background:-webkit-linear-gradient(-45deg,#0b1220,#141b2a);background:linear-gradient(135deg,#0b1220,#141b2a)}
+.mono{font-family:"JetBrains Mono","Courier New",monospace}
+.top{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-pack:justify;-webkit-justify-content:space-between;justify-content:space-between;-webkit-box-align:end;-webkit-align-items:flex-end;align-items:flex-end}
+.kick{font-size:22px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#6f7b8b}
+.ttl{font-size:58px;font-weight:800;margin-top:4px}
+.clock{font-size:46px;font-weight:600;color:#8c97a6}
+.main{display:-webkit-box;display:-webkit-flex;display:flex;margin-top:40px;height:800px}
+.feat{width:1060px;margin-right:44px;position:relative}
+.feat .img{width:1060px;height:500px;border-radius:26px;background:#141c27 center center no-repeat;-webkit-background-size:cover;background-size:cover;border:2px solid rgba(255,255,255,.06)}
+.feat .noimg{background:-webkit-linear-gradient(-45deg,#173061,#0f3d33);background:linear-gradient(135deg,#173061,#0f3d33)}
+.feat .h{font-size:50px;font-weight:800;line-height:1.15;margin-top:30px;max-height:180px;overflow:hidden}
+.feat .d{font-size:28px;color:#a7b2c1;margin-top:16px;line-height:1.4;max-height:80px;overflow:hidden}
+.feat .m{font-size:21px;color:#5b6676;margin-top:14px;font-weight:600}
+.list{-webkit-box-flex:1;-webkit-flex:1;flex:1;min-width:0}
+.it{padding:20px 0 20px 26px;border-bottom:1px solid rgba(255,255,255,.07);border-left:5px solid transparent}
+.it.on{border-left-color:#10b981;background:rgba(255,255,255,.03)}
+.it .h{font-size:28px;font-weight:700;line-height:1.3;max-height:74px;overflow:hidden;color:#c9d1dc}
+.it.on .h{color:#fff}
+.it .m{font-size:19px;color:#5b6676;margin-top:6px;font-weight:600}
+.bar{position:absolute;left:0;bottom:-18px;height:4px;background:#10b981;border-radius:4px;width:0}
+.foot{position:absolute;left:96px;right:96px;bottom:40px;font-size:19px;color:#4a5563}
+#msg{position:absolute;top:46%;left:0;width:1920px;text-align:center;font-size:32px;color:#6f7b8b}
+</style>
+</head>
+<body>
+<div id="s"><div id="msg">Loading the news…</div></div>
+<script>
+/* Screen Hub app: Local news from any RSS feed.
+   Options: feedUrl (default BBC News, Manchester), title, count (headlines, default 6),
+   rotateSeconds (time on each headline, default 10). */
+(function () {
+  var O = (window.RS_APP && window.RS_APP.options) || {};
+  var FEED = O.feedUrl || "https://feeds.bbci.co.uk/news/england/manchester/rss.xml";
+  var TITLE = O.title || "Local news", COUNT = Math.max(3, Math.min(8, Number(O.count) || 6)), ROT = Math.max(5, Math.min(60, Number(O.rotateSeconds) || 10)) * 1000;
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function pad(n) { return (n < 10 ? "0" : "") + n; }
+  function strip(h) { var d = document.createElement("div"); d.innerHTML = String(h || ""); return (d.textContent || "").replace(/\s+/g, " ").replace(/^\s+|\s+$/g, ""); }
+  function ago(t) {
+    var d = new Date(t).getTime(); if (isNaN(d)) return "";
+    var m = Math.round((new Date().getTime() - d) / 60000);
+    return m < 60 ? Math.max(1, m) + " min ago" : m < 1440 ? Math.round(m / 60) + " hr ago" : Math.round(m / 1440) + " days ago";
+  }
+  function get(u, ok, fail) {
+    var x = new XMLHttpRequest(); x.open("GET", u, true); x.timeout = 15000;
+    x.onreadystatechange = function () { if (x.readyState === 4) { if ((x.status >= 200 && x.status < 300) || (x.status === 0 && x.responseText)) ok(x.responseText); else fail(); } };
+    x.ontimeout = fail; try { x.send(); } catch (e) { fail(); }
+  }
+  function fail() { $("s").innerHTML = '<div id="msg">The news feed isn\'t available right now.</div>'; }
+  function parseRss(t) {
+    var doc = new DOMParser().parseFromString(t, "text/xml"), items = doc.getElementsByTagName("item"), out = [], i;
+    var src = doc.getElementsByTagName("title")[0];
+    for (i = 0; i < items.length && out.length < COUNT; i++) {
+      var it = items[i], img = "";
+      function tx(n) { var e = it.getElementsByTagName(n)[0]; return e ? e.textContent : ""; }
+      var th = it.getElementsByTagNameNS ? (it.getElementsByTagNameNS("*", "thumbnail")[0] || it.getElementsByTagNameNS("*", "content")[0]) : null;
+      if (th && th.getAttribute("url")) img = th.getAttribute("url");
+      var enc = it.getElementsByTagName("enclosure")[0]; if (!img && enc && /image/.test(enc.getAttribute("type") || "")) img = enc.getAttribute("url");
+      out.push({ title: strip(tx("title")), desc: strip(tx("description")), date: tx("pubDate"), img: img });
+    }
+    return { source: src ? strip(src.textContent) : "", items: out };
+  }
+  var data = null, idx = 0, timer = null;
+  function render() {
+    var it = data.items[idx], now = new Date(), list = "", i;
+    for (i = 0; i < data.items.length; i++) list += '<div class="it' + (i === idx ? " on" : "") + '"><div class="h">' + esc(data.items[i].title) + '</div><div class="m">' + esc(ago(data.items[i].date)) + '</div></div>';
+    var img = it.img ? String(it.img).replace(/\/(\d{2,3})\/cpsprodpb/, "/800/cpsprodpb").replace(/"/g, "%22") : "";
+    $("s").innerHTML = '<div class="top"><div><div class="kick">' + esc(data.source || "News") + '</div><div class="ttl">' + esc(TITLE) + '</div></div><div class="clock mono">' + pad(now.getHours()) + ":" + pad(now.getMinutes()) + '</div></div>' +
+      '<div class="main"><div class="feat"><div class="img' + (img ? "" : " noimg") + '"' + (img ? ' style="background-image:url(&quot;' + esc(img) + '&quot;)"' : "") + '></div>' +
+      '<div class="h">' + esc(it.title) + '</div>' + (it.desc ? '<div class="d">' + esc(it.desc) + '</div>' : "") + '<div class="m">' + esc(ago(it.date)) + '</div></div>' +
+      '<div class="list">' + list + '</div></div><div class="foot">Headline ' + (idx + 1) + " of " + data.items.length + '</div>';
+  }
+  function show(d) {
+    if (!d.items.length) { fail(); return; }
+    data = d; idx = 0; render();
+    clearInterval(timer); timer = setInterval(function () { idx = (idx + 1) % data.items.length; render(); }, ROT);
+  }
+  // direct first (TV apps aren't bound by CORS); a CORS-friendly converter as the fallback
+  get(FEED, function (t) { try { show(parseRss(t)); } catch (e) { viaProxy(); } }, viaProxy);
+  function viaProxy() {
+    get("https://api.rss2json.com/v1/api.json?rss_url=" + encodeURIComponent(FEED), function (t) {
+      try {
+        var j = JSON.parse(t), out = [], i;
+        for (i = 0; i < (j.items || []).length && out.length < COUNT; i++) out.push({ title: strip(j.items[i].title), desc: strip(j.items[i].description), date: (j.items[i].pubDate || "").replace(" ", "T") + "Z", img: j.items[i].thumbnail || (j.items[i].enclosure && j.items[i].enclosure.link) || "" });
+        show({ source: j.feed && j.feed.title, items: out });
+      } catch (e) { fail(); }
+    }, fail);
+  }
+})();
+</script>
+</body>
+</html>

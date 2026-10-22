@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>Traffic</title>
+<style>
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap");
+*{box-sizing:border-box}
+html,body{margin:0;width:1920px;height:1080px;overflow:hidden;background:#0b1220;color:#e8edf5;font-family:"Plus Jakarta Sans","Samsung One","Tizen Sans",sans-serif}
+#map{position:absolute;left:0;top:0;width:1920px;height:1080px;border:0;background:#141c27}
+.chip{position:absolute;left:96px;top:56px;background:rgba(9,13,20,.88);border:2px solid #1f2836;border-radius:22px;padding:22px 30px;min-width:520px}
+.chip .k{font-size:20px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#6f7b8b}
+.chip .t{font-size:46px;font-weight:800;margin-top:2px}
+.chip .s{font-size:21px;color:#8c97a6;margin-top:6px}
+.chip .mono{font-family:"JetBrains Mono","Courier New",monospace}
+.key{position:absolute;right:96px;bottom:48px;background:rgba(9,13,20,.85);border:2px solid #1f2836;border-radius:16px;padding:14px 22px;font-size:20px;color:#a7b2c1}
+.key i{display:inline-block;width:34px;height:8px;border-radius:4px;margin:0 8px 3px 18px;vertical-align:middle}
+.key i:first-child{margin-left:0}
+</style>
+</head>
+<body>
+<iframe id="map" frameborder="0" scrolling="no" allowfullscreen></iframe>
+<div class="chip" id="chip"><div class="k">Live traffic</div><div class="t" id="title"></div><div class="s"><span id="src">Map from Waze</span> · <span class="mono" id="clk"></span></div></div>
+<div class="key"><i style="background:#f6c21e"></i>Slow<i style="background:#f57c1e"></i>Heavy<i style="background:#e0241f"></i>Standstill</div>
+<script>
+/* Screen Hub app: Traffic. A live Waze traffic map centred on a chosen point.
+   Options: title (default "Macclesfield"), lat, lon (default Macclesfield town centre), zoom (8–17, default 12). */
+(function () {
+  var O = (window.RS_APP && window.RS_APP.options) || {};
+  var lat = Number(O.lat) || 53.2587, lon = Number(O.lon) || -2.1270, z = Math.max(8, Math.min(17, Number(O.zoom) || 12));
+  function pad(n) { return (n < 10 ? "0" : "") + n; }
+  document.getElementById("title").textContent = O.title || "Macclesfield";
+  document.getElementById("map").src = "https://embed.waze.com/iframe?zoom=" + z + "&lat=" + lat + "&lon=" + lon + "&ct=livemap";
+  function tick() { var d = new Date(); document.getElementById("clk").textContent = pad(d.getHours()) + ":" + pad(d.getMinutes()); }
+  tick(); setInterval(tick, 10000);
+  // nudge the label a few pixels each minute so nothing static burns in
+  setInterval(function () { var c = document.getElementById("chip"); c.style.left = (90 + Math.round(Math.random() * 14)) + "px"; c.style.top = (50 + Math.round(Math.random() * 12)) + "px"; }, 60000);
+})();
+</script>
+</body>
+</html>

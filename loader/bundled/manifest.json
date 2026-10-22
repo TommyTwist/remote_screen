@@ -1,0 +1,9 @@
+{
+  "version": "1.0.0",
+  "released": "2026-10-22",
+  "files": { "html": "player.html", "css": "player.css", "js": ["sjcl.js", "player.js"] },
+  "config": {
+    "REPO_RAW": "https://raw.githubusercontent.com/TommyTwist/remote_screen/main/",
+    "MANIFEST_URL": "https://raw.githubusercontent.com/TommyTwist/remote_screen/main/player/manifest.json"
+  }
+}

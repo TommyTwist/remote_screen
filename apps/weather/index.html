@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>Weather</title>
+<style>
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap");
+*{box-sizing:border-box}
+html,body{margin:0;width:1920px;height:1080px;overflow:hidden;background:#0b1220;color:#e8edf5;font-family:"Plus Jakarta Sans","Samsung One","Tizen Sans",sans-serif}
+#s{position:absolute;left:0;top:0;width:1920px;height:1080px;padding:56px 96px 48px;background:-webkit-linear-gradient(-45deg,#0b1a33,#0a1d18);background:linear-gradient(135deg,#0b1a33,#0a1d18)}
+.mono{font-family:"JetBrains Mono","Courier New",monospace}
+.top{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-pack:justify;-webkit-justify-content:space-between;justify-content:space-between;-webkit-box-align:end;-webkit-align-items:flex-end;align-items:flex-end}
+.kick{font-size:22px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#6f7b8b}
+.place{font-size:58px;font-weight:800;margin-top:4px}
+.clock{font-size:46px;font-weight:600;color:#8c97a6;text-align:right}
+.clock small{display:block;font-family:"Plus Jakarta Sans",sans-serif;font-size:22px;color:#5b6676;font-weight:600}
+.main{display:-webkit-box;display:-webkit-flex;display:flex;margin-top:48px}
+.now{width:660px;min-height:800px;background:rgba(255,255,255,.04);border:2px solid rgba(255,255,255,.07);border-radius:28px;padding:36px 40px;margin-right:36px}
+.now .row{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center}
+.now svg{width:200px;height:200px;margin-right:22px}
+.now .t{font-size:180px;font-weight:700;line-height:1;letter-spacing:-.03em}
+.now .t sup{font-size:56px;vertical-align:top;margin-left:4px;color:#8c97a6}
+.now .d{font-size:38px;font-weight:700;margin-top:18px}
+.now .f{font-size:26px;color:#8c97a6;margin-top:6px}
+.stats{margin-top:56px;display:-webkit-box;display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap}
+.stat{width:50%;padding:18px 0}
+.stat .k{font-size:17px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#5b6676}
+.stat .v{font-size:36px;font-weight:600;margin-top:2px}
+.right{-webkit-box-flex:1;-webkit-flex:1;flex:1;min-width:0}
+.lbl{font-size:18px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#5b6676;margin-bottom:12px}
+.hours{display:-webkit-box;display:-webkit-flex;display:flex;background:rgba(255,255,255,.04);border:2px solid rgba(255,255,255,.07);border-radius:24px;padding:30px 10px}
+.h{-webkit-box-flex:1;-webkit-flex:1;flex:1;text-align:center}
+.h .tm{font-size:22px;color:#8c97a6;font-weight:600}
+.h svg{width:80px;height:80px;margin:12px 0}
+.h .tp{font-size:38px;font-weight:700}
+.h .rn{font-size:22px;color:#5b9dff;font-weight:600;margin-top:4px}
+.days{display:-webkit-box;display:-webkit-flex;display:flex}
+.day{-webkit-box-flex:1;-webkit-flex:1;flex:1;background:rgba(255,255,255,.04);border:2px solid rgba(255,255,255,.07);border-radius:24px;padding:30px 26px;margin-right:18px;min-height:340px}
+.day:last-child{margin-right:0}
+.day .n{font-size:32px;font-weight:800}
+.day svg{width:110px;height:110px;margin:16px 0 8px}
+.day .r{font-size:42px;font-weight:700}
+.day .r span{color:#6f7b8b;font-weight:600}
+.day .p{font-size:23px;color:#a7b2c1;font-weight:600;margin-top:8px}.day .p b{display:block;color:#5b9dff;font-weight:600;margin-top:2px}
+.foot{position:absolute;left:96px;right:96px;bottom:40px;font-size:19px;color:#4a5563;display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-pack:justify;-webkit-justify-content:space-between;justify-content:space-between}
+#msg{position:absolute;top:46%;left:0;width:1920px;text-align:center;font-size:32px;color:#6f7b8b}
+</style>
+</head>
+<body>
+<div id="s"><div id="msg">Loading the weather…</div></div>
+<script>
+/* Screen Hub app: Weather. Data from Open-Meteo (free, no key).
+   Options: place (name, default "Macclesfield"), lat, lon, label, units ("C" or "F"), wind ("mph" or "kmh"). */
+(function () {
+  var O = (window.RS_APP && window.RS_APP.options) || {};
+  var PLACE = O.place || "Macclesfield", F = String(O.units || "C").toUpperCase() === "F", WIND = O.wind === "kmh" ? "kmh" : "mph";
+  var DN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], DNL = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  var MN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function pad(n) { return (n < 10 ? "0" : "") + n; }
+  function get(u, ok, fail) {
+    var x = new XMLHttpRequest(); x.open("GET", u, true); x.timeout = 15000;
+    x.onreadystatechange = function () { if (x.readyState === 4) { if (x.status >= 200 && x.status < 300) { try { ok(JSON.parse(x.responseText)); } catch (e) { fail(); } } else fail(); } };
+    x.ontimeout = fail; try { x.send(); } catch (e) { fail(); }
+  }
+  function fail(t) { $("s").innerHTML = '<div id="msg">' + esc(t || "Weather isn't available right now.") + '</div>'; }
+  // WMO weather codes → [label, icon]
+  function wx(c) {
+    if (c === 0) return ["Clear", "sun"]; if (c === 1) return ["Mostly clear", "sun"]; if (c === 2) return ["Partly cloudy", "part"]; if (c === 3) return ["Overcast", "cloud"];
+    if (c === 45 || c === 48) return ["Fog", "fog"]; if (c >= 51 && c <= 57) return ["Drizzle", "rain"]; if (c >= 61 && c <= 67) return [c >= 65 ? "Heavy rain" : "Rain", "rain"];
+    if (c >= 71 && c <= 77) return ["Snow", "snow"]; if (c >= 80 && c <= 82) return ["Showers", "rain"]; if (c === 85 || c === 86) return ["Snow showers", "snow"];
+    if (c >= 95) return ["Thunderstorms", "storm"]; return ["—", "cloud"];
+  }
+  function icon(kind, night) {
+    var sun = night ? '<path d="M44 20a20 20 0 1 0 16 30 16 16 0 0 1-16-30z" fill="#c9d1dc"/>' :
+      '<circle cx="40" cy="36" r="14" fill="#f0bd52"/><g stroke="#f0bd52" stroke-width="4" stroke-linecap="round"><path d="M40 10v6M40 56v6M14 36h6M60 36h6M22 18l4 4M54 50l4 4M22 54l4-4M54 22l4-4"/></g>';
+    var cloud = '<path d="M26 64h34a14 14 0 0 0 0-28 20 20 0 0 0-38 6 11 11 0 0 0 4 22z" fill="#a7b2c1"/>';
+    var dcloud = '<path d="M26 64h34a14 14 0 0 0 0-28 20 20 0 0 0-38 6 11 11 0 0 0 4 22z" fill="#6f7b8b"/>';
+    var s = { sun: sun, part: '<g transform="translate(-8,-8) scale(.8)">' + sun + '</g>' + cloud, cloud: cloud,
+      fog: cloud + '<g stroke="#6f7b8b" stroke-width="4" stroke-linecap="round"><path d="M18 72h44M24 80h32"/></g>',
+      rain: dcloud + '<g stroke="#5b9dff" stroke-width="4" stroke-linecap="round"><path d="M30 70l-4 9M44 70l-4 9M58 70l-4 9"/></g>',
+      snow: dcloud + '<g fill="#e8edf5"><circle cx="30" cy="75" r="3.5"/><circle cx="44" cy="79" r="3.5"/><circle cx="58" cy="75" r="3.5"/></g>',
+      storm: dcloud + '<path d="M44 62l-8 14h8l-4 10 12-16h-8l4-8z" fill="#f0bd52"/>' }[kind] || cloud;
+    return '<svg viewBox="0 0 80 88">' + s + '</svg>';
+  }
+  function T(v) { return Math.round(v) + "°"; }
+  function compass(d) { return ["N", "NE", "E", "SE", "S", "SW", "W", "NW"][Math.round(((d % 360) / 45)) % 8]; }
+  function render(w, name) {
+    var c = w.current, h = w.hourly, dy = w.daily, now = new Date(), cw = wx(c.weather_code), isNight = c.is_day === 0;
+    var i, start = 0, hrs = "", days = "";
+    for (i = 0; i < h.time.length; i++) if (new Date(h.time[i]).getTime() >= now.getTime() - 30 * 60000) { start = i; break; }
+    for (i = start; i < Math.min(start + 12, h.time.length); i++) {
+      var hd = new Date(h.time[i]), hw = wx(h.weather_code[i]), hn = hd.getHours() < 7 || hd.getHours() >= 19;
+      hrs += '<div class="h"><div class="tm mono">' + (i === start ? "Now" : pad(hd.getHours()) + ":00") + '</div>' + icon(hw[1], hn) + '<div class="tp">' + T(h.temperature_2m[i]) + '</div><div class="rn">' + (h.precipitation_probability[i] || 0) + '%</div></div>';
+    }
+    for (i = 1; i < Math.min(6, dy.time.length); i++) {
+      var dd = new Date(dy.time[i] + "T12:00:00"), dw = wx(dy.weather_code[i]);
+      days += '<div class="day"><div class="n">' + (i === 1 ? "Tomorrow" : DN[dd.getDay()]) + '</div>' + icon(dw[1], false) +
+        '<div class="r">' + T(dy.temperature_2m_max[i]) + ' <span>' + T(dy.temperature_2m_min[i]) + '</span></div><div class="p">' + esc(dw[0]) + '<b>' + (dy.precipitation_probability_max[i] || 0) + '% rain</b></div></div>';
+    }
+    var sr = dy.sunrise && dy.sunrise[0] ? dy.sunrise[0].slice(11, 16) : "—", ss = dy.sunset && dy.sunset[0] ? dy.sunset[0].slice(11, 16) : "—";
+    $("s").innerHTML =
+      '<div class="top"><div><div class="kick">Weather</div><div class="place">' + esc(O.label || name) + '</div></div>' +
+      '<div class="clock mono" id="clk">' + pad(now.getHours()) + ":" + pad(now.getMinutes()) + '<small>' + DNL[now.getDay()] + " " + now.getDate() + " " + MN[now.getMonth()] + '</small></div></div>' +
+      '<div class="main"><div class="now"><div class="row">' + icon(cw[1], isNight) + '<div class="t">' + Math.round(c.temperature_2m) + '<sup>°' + (F ? "F" : "C") + '</sup></div></div>' +
+      '<div class="d">' + esc(cw[0]) + '</div><div class="f">Feels like ' + T(c.apparent_temperature) + " · today " + T(dy.temperature_2m_max[0]) + " / " + T(dy.temperature_2m_min[0]) + '</div>' +
+      '<div class="stats"><div class="stat"><div class="k">Wind</div><div class="v">' + Math.round(c.wind_speed_10m) + " " + WIND + " " + compass(c.wind_direction_10m) + '</div></div>' +
+      '<div class="stat"><div class="k">Gusts</div><div class="v">' + Math.round(c.wind_gusts_10m) + " " + WIND + '</div></div>' +
+      '<div class="stat"><div class="k">Humidity</div><div class="v">' + Math.round(c.relative_humidity_2m) + '%</div></div>' +
+      '<div class="stat"><div class="k">Rain today</div><div class="v">' + (dy.precipitation_probability_max[0] || 0) + '% chance</div></div>' +
+      '<div class="stat"><div class="k">Sunrise</div><div class="v mono">' + sr + '</div></div><div class="stat"><div class="k">Sunset</div><div class="v mono">' + ss + '</div></div></div></div>' +
+      '<div class="right"><div class="lbl">Next 12 hours · chance of rain</div><div class="hours">' + hrs + '</div><div class="lbl" style="margin-top:44px">Next 5 days</div><div class="days">' + days + '</div></div></div>' +
+      '<div class="foot"><span>Forecast from Open-Meteo</span><span>Updated ' + pad(now.getHours()) + ":" + pad(now.getMinutes()) + '</span></div>';
+  }
+  function forecast(lat, lon, name) {
+    get("https://api.open-meteo.com/v1/forecast?latitude=" + lat + "&longitude=" + lon +
+      "&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,relative_humidity_2m,is_day" +
+      "&hourly=temperature_2m,precipitation_probability,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset" +
+      "&timezone=auto&forecast_days=7&wind_speed_unit=" + WIND + (F ? "&temperature_unit=fahrenheit" : ""),
+      function (w) { try { render(w, name); } catch (e) { fail(); } }, function () { fail(); });
+  }
+  if (O.lat && O.lon) forecast(Number(O.lat), Number(O.lon), PLACE);
+  else get("https://geocoding-api.open-meteo.com/v1/search?count=1&language=en&name=" + encodeURIComponent(PLACE), function (g) {
+    var r = g && g.results && g.results[0];
+    if (!r) { fail("Couldn't find “" + PLACE + "”. Check the place name in the console."); return; }
+    forecast(r.latitude, r.longitude, r.name);
+  }, function () { fail(); });
+  setInterval(function () { var c = $("clk"), d = new Date(); if (c && c.firstChild) c.firstChild.nodeValue = pad(d.getHours()) + ":" + pad(d.getMinutes()); }, 10000);
+})();
+</script>
+</body>
+</html>

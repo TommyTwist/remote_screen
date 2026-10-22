@@ -55,3 +55,13 @@ master secret, which lives only in the console's private database:
     name = hex(HMAC(secret, "rs1|name|" + assetId))[0:32]
     mkey = HMAC(secret, "rs1|mkey|" + assetId)
     iv8  = HMAC(secret, "rs1|iv|" + assetId)[0:8]
+
+## Publishing
+
+The console encrypts in the browser: **Publish now** reads the master secret (owner only),
+builds every `s/` file and encrypted media file, and leaves them in the console's database
+(`outbox/manifest`, `outbox/s-<fileId>`) and asset store (media prefixed with the 8 bytes
+`SHUBENC1`). The scheduled task then runs `tools/apply_outbox.py`, which only copies those
+ready-made files into `s/` and `m/` and deletes ones the manifest no longer lists. It never
+sees the master secret, pairing codes or media keys. `tools/publish.py` does the same
+encryption from the command line and is kept as a manual fallback.

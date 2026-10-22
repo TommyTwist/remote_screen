@@ -5,6 +5,7 @@ No extra packages: standard-library Python 3.8+ only (Windows, macOS or Linux).
 
     python tvremote.py find                 find Samsung TVs on the network and save them
     python tvremote.py ui                   open the control page (http://127.0.0.1:8765)
+                                            (on Windows, double-click "TV Remote.cmd" instead)
     python tvremote.py status               power state of every saved TV
     python tvremote.py on | off             power (on = Wake-on-LAN)
     python tvremote.py open                 start Screen Hub on the TV
@@ -29,7 +30,7 @@ import argparse, base64, json, os, socket, ssl, struct, sys, threading, time, uu
 import urllib.request, urllib.error, ipaddress, webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 APP_ID = "RScreenHub.ScreenHub"           # loader/config.xml tizen:application id
 YOUTUBE_APP = "111299001912"
 REMOTE_NAME = "Screen Hub Remote"
@@ -586,6 +587,10 @@ class UI(BaseHTTPRequestHandler):
             return
         c = UI.conf
         try:
+            if self.path == "/api/quit":
+                self._json(200, {"ok": True, "msg": "TV Remote stopped"})
+                threading.Thread(target=UI.httpd.shutdown, daemon=True).start()
+                return
             if self.path == "/api/find":
                 lines = []
                 find(c, lines.append)
@@ -648,10 +653,28 @@ def add_tv(conf, name, ip, mac=""):
     return name
 
 
+def already_running(port):
+    try:
+        j = http_json("http://127.0.0.1:%d/api/tvs" % port, 4)
+        return "tvs" in j
+    except Exception:
+        return False
+
+
+class Server(ThreadingHTTPServer):
+    allow_reuse_address = os.name != "nt"   # on Windows this would let a second copy share the port
+    daemon_threads = True
+
+
 def serve(conf, port, open_browser=True):
     UI.conf, UI.port = conf, port
-    httpd = ThreadingHTTPServer(("127.0.0.1", port), UI)
     url = "http://127.0.0.1:%d/" % port
+    if already_running(port):  # double-clicked again: just show the page that's already running
+        if open_browser:
+            webbrowser.open(url)
+        return
+    httpd = Server(("127.0.0.1", port), UI)
+    UI.httpd = httpd
     print("Screen Hub TV Remote %s on %s  (Ctrl+C to stop)" % (VERSION, url))
     if open_browser:
         threading.Timer(0.6, lambda: webbrowser.open(url)).start()

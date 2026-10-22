@@ -94,7 +94,7 @@ details .in{padding:0 18px 18px}
       <p class="sub">Screen Hub · Samsung TVs on this network</p>
     </div>
     <div class="pill-row">
-      <button class="pill pill-version" id="verBtn" aria-expanded="false" title="View changelog">v1.0.0</button>
+      <button class="pill pill-version" id="verBtn" aria-expanded="false" title="View changelog">v1.1.0</button>
       <button class="pill pill-refresh" id="refBtn" aria-expanded="false" title="View data sources">Checking…</button>
       <div class="pop" id="verPop" role="dialog" aria-label="Changelog"></div>
       <div class="pop" id="refPop" role="dialog" aria-label="Data sources"></div>
@@ -218,6 +218,7 @@ details .in{padding:0 18px 18px}
       <label for="aMac">MAC address for switching on (optional, filled in automatically when the TV is on)</label>
       <input id="aMac" class="mono" placeholder="AA:BB:CC:DD:EE:FF">
       <div class="row" style="margin-top:10px"><button class="b" id="addBtn">Save TV</button><button class="b" id="defBtn">Make selected the default</button><button class="b" id="rmBtn">Forget selected</button></div>
+      <div class="row" style="margin-top:10px"><button class="b" id="quitBtn">Stop TV Remote</button></div>
       <div id="tvTable" class="mono" style="margin-top:12px; color:var(--muted)"></div>
     </div>
   </details>
@@ -225,6 +226,7 @@ details .in{padding:0 18px 18px}
   <details>
     <summary>How it works</summary>
     <div class="in note">
+      <p><b>Starting it:</b> double-click <b>TV Remote</b> (the desktop shortcut, or TV Remote.cmd in the Screen Hub\TV Remote folder). It runs quietly in the background until you press Stop TV Remote or restart the PC.</p>
       <p>This page runs on this PC only (127.0.0.1) and talks straight to the TVs over the home network, so it is instant but only works at home. Publishing from the console is unchanged.</p>
       <p><b>First use:</b> the TV shows an Allow prompt for “Screen Hub Remote”. Press Allow with the TV remote. If you pressed Deny, allow it under Settings › General › External Device Manager › Device Connection Manager.</p>
       <p><b>Switching on</b> uses Wake-on-LAN. On 2016 Samsungs it works when Samsung Instant On / network standby is on, and is most reliable on a wired connection. The page saves the TV's MAC address the first time it sees the TV switched on.</p>
@@ -239,6 +241,7 @@ details .in{padding:0 18px 18px}
 (function(){
   "use strict";
   var CHANGELOG = [
+    { v:"1.1.0", d:"22 Oct 2026", t:"Click to open: double-click TV Remote.cmd (or its desktop shortcut) to start the tool and open this page; opening it again reuses the running copy. Stop button under Screens and settings." },
     { v:"1.0.0", d:"22 Oct 2026", t:"First release: power on/off, open Screen Hub, playlist and volume controls, Show now (message, YouTube, website, clock), remote keys, app list, find and save TVs." }
   ];
   var MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -291,6 +294,7 @@ details .in{padding:0 18px 18px}
       state.tvs=j.tvs||[]; state.def=j.default; state.checked=j.checked;
       if(!state.sel || (state.sel!=="all" && !state.tvs.some(function(t){return t.name===state.sel;}))) state.sel = state.def || (state.tvs[0] && state.tvs[0].name) || null;
       renderTvs(); renderRef();
+      if(!state.tvs.length && !state.autoFound){ state.autoFound=true; $("findBtn").click(); } // first open: look for TVs straight away
     }).catch(function(){ toast("Can't reach the remote tool. Is tvremote.py ui still running?", true); });
   }
 
@@ -345,6 +349,9 @@ details .in{padding:0 18px 18px}
     if(j.results){ toast(j.results[0].msg, true); return; } toast("Saved"); load(); }); };
   $("defBtn").onclick=function(){ if(!state.sel||state.sel==="all") return; api("/api/default",{name:state.sel}).then(load); };
   $("rmBtn").onclick=function(){ if(!state.sel||state.sel==="all") return; if(!confirm("Forget "+state.sel+"?")) return; api("/api/remove",{name:state.sel}).then(function(){ state.sel=null; load(); }); };
+
+  $("quitBtn").onclick=function(){ if(!confirm("Stop TV Remote? Double-click TV Remote again to restart it.")) return;
+    api("/api/quit",{}).then(function(){ document.body.innerHTML='<div class="wrap"><h1>TV Remote stopped</h1><p class="note">Double-click TV Remote to start it again.</p></div>'; }); };
 
   renderRef(); load(); setInterval(load, 30000);
 })();

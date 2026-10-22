@@ -46,6 +46,9 @@ An app is one self-contained HTML file; the player writes it into a frame and pa
 
 `tools/tvremote.py` controls Samsung TVs straight over the home network, so it is instant but only works at home.
 Standard-library Python 3.8+, nothing to install.
+On Windows, double-click `tools/TV Remote.cmd`: it starts the tool quietly, opens the control page and, the first
+time, puts a **TV Remote** shortcut on the desktop. Opening it again reuses the running copy; **Stop TV Remote** is under
+Screens and settings.
 
 ```
 python tools/tvremote.py find        # find TVs that are switched on and save them

@@ -34,12 +34,20 @@ html,body{margin:0;width:1920px;height:1080px;overflow:hidden;background:#0b1220
 <body>
 <div id="s"><div id="msg">Loading the news…</div></div>
 <script>
-/* Screen Hub app: Local news from any RSS feed.
-   Options: feedUrl (default BBC News, Manchester), title, count (headlines, default 6),
-   rotateSeconds (time on each headline, default 10). */
+/* Screen Hub app: Local news from any RSS feed, or news about a town or area.
+   Options: place (a town or area: news mentioning it, via Google News; takes priority over feedUrl),
+   feedUrl (default BBC News, Manchester), title, count (headlines, default 6),
+   rotateSeconds (time on each headline, default 10), filter ("all" or "good": leave out crime,
+   deaths, crashes, court cases and other bad news). */
 (function () {
   var O = (window.RS_APP && window.RS_APP.options) || {};
-  var FEED = O.feedUrl || "https://feeds.bbci.co.uk/news/england/manchester/rss.xml";
+  var PLACE = String(O.place || "").replace(/^\s+|\s+$/g, "");
+  var GOOD = O.filter === "good";
+  var FEED = PLACE ? "https://news.google.com/rss/search?q=" + encodeURIComponent('"' + PLACE + '"') + "&hl=en-GB&gl=GB&ceid=GB:en"
+    : (O.feedUrl || "https://feeds.bbci.co.uk/news/england/manchester/rss.xml");
+  var POOL = 40;   // headlines read from the feed before filtering
+  // Good news only: a headline (or its summary) matching any of these is left out.
+  var BAD = /\b(kill|death|dead|die[sd]?\b|dying|murder|manslaughter|stab|shoot|shot\b|guns?\b|knife|knives|weapon|bomb|explo|terror|attack|assault|rape|sexual|abuse|grooming|paedophil|crash|collision|smash|accident|injur|hurt\b|wound|hospitalis|critical condition|fatal|tragic|tragedy|victim|inquest|funeral|mourn|tribute|missing|court|trial|judge|jail|prison|sentenc|guilty|convict|charged|charges? against|arrest|police|officer|detective|crime|criminal|theft|thief|steal|stole|burglar|robber|fraud|scam|drug|cannabis|cocaine|violen|riot|protest|fires?\b|blaze|arson|flood|storms?\b|warning|evacuat|emergency|wars?\b|invasion|missile|strike|walkout|redundan|job losses|jobs at risk|layoff|closure|closing|close down|shut\b|shuts\b|collapse|administration|bankrupt|debt|cuts\b|crisis|fears?\b|feared|rows?\b|anger|furious|outrage|condemn|slam\b|slams|slammed|blame|scandal|controvers|complain|disease|outbreak|virus|cancer|overdose|suicide|bully|hate\b|hatred|racis|threat|danger|unsafe|chaos|delays?\b|disrupt|poverty|homeless|eviction|vandal|antisocial|anti-social|dog attack|pothole)/i;
   var TITLE = O.title || "Local news", COUNT = Math.max(3, Math.min(8, Number(O.count) || 6)), ROT = Math.max(5, Math.min(60, Number(O.rotateSeconds) || 10)) * 1000;
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
@@ -55,32 +63,56 @@ html,body{margin:0;width:1920px;height:1080px;overflow:hidden;background:#0b1220
     x.onreadystatechange = function () { if (x.readyState === 4) { if ((x.status >= 200 && x.status < 300) || (x.status === 0 && x.responseText)) ok(x.responseText); else fail(); } };
     x.ontimeout = fail; try { x.send(); } catch (e) { fail(); }
   }
-  function fail() { $("s").innerHTML = '<div id="msg">The news feed isn\'t available right now.</div>'; }
+  function fail(t) { $("s").innerHTML = '<div id="msg">' + esc(t || "The news feed isn't available right now.") + '</div>'; }
+  function isBad(it) { return BAD.test(it.title) || BAD.test(it.desc); }
+  // Google News titles end " - Source"; keep the outlet for the meta line, drop it from the headline
+  function tidy(it) {
+    if (PLACE) {
+      var m = it.title.match(/^(.*\S)\s+[-\u2013\u2014]\s+([^-\u2013\u2014]{2,60})$/);
+      if (m) { it.title = m[1]; it.src = it.src || m[2]; }
+      it.desc = "";   // Google's summaries just repeat the headline as a link list
+    }
+    return it;
+  }
+  function pick(items) {
+    var out = [], i, seen = {};
+    for (i = 0; i < items.length && out.length < COUNT; i++) {
+      var it = tidy(items[i]), k = it.title.toLowerCase();
+      if (!it.title || seen[k]) continue;
+      if (GOOD && isBad(it)) continue;
+      seen[k] = 1; out.push(it);
+    }
+    return out;
+  }
   function parseRss(t) {
     var doc = new DOMParser().parseFromString(t, "text/xml"), items = doc.getElementsByTagName("item"), out = [], i;
     var src = doc.getElementsByTagName("title")[0];
-    for (i = 0; i < items.length && out.length < COUNT; i++) {
+    for (i = 0; i < items.length && out.length < POOL; i++) {
       var it = items[i], img = "";
       function tx(n) { var e = it.getElementsByTagName(n)[0]; return e ? e.textContent : ""; }
       var th = it.getElementsByTagNameNS ? (it.getElementsByTagNameNS("*", "thumbnail")[0] || it.getElementsByTagNameNS("*", "content")[0]) : null;
       if (th && th.getAttribute("url")) img = th.getAttribute("url");
       var enc = it.getElementsByTagName("enclosure")[0]; if (!img && enc && /image/.test(enc.getAttribute("type") || "")) img = enc.getAttribute("url");
-      out.push({ title: strip(tx("title")), desc: strip(tx("description")), date: tx("pubDate"), img: img });
+      out.push({ title: strip(tx("title")), desc: strip(tx("description")), date: tx("pubDate"), img: img, src: strip(tx("source")) });
     }
     return { source: src ? strip(src.textContent) : "", items: out };
   }
   var data = null, idx = 0, timer = null;
+  function meta(it) { var a = ago(it.date); return it.src ? (a ? a + " · " : "") + it.src : a; }
+  function kicker() { return (PLACE ? "News · " + PLACE : (data.source || "News")) + (GOOD ? " · Good news" : ""); }
   function render() {
     var it = data.items[idx], now = new Date(), list = "", i;
-    for (i = 0; i < data.items.length; i++) list += '<div class="it' + (i === idx ? " on" : "") + '"><div class="h">' + esc(data.items[i].title) + '</div><div class="m">' + esc(ago(data.items[i].date)) + '</div></div>';
+    for (i = 0; i < data.items.length; i++) list += '<div class="it' + (i === idx ? " on" : "") + '"><div class="h">' + esc(data.items[i].title) + '</div><div class="m">' + esc(meta(data.items[i])) + '</div></div>';
     var img = it.img ? String(it.img).replace(/\/(\d{2,3})\/cpsprodpb/, "/800/cpsprodpb").replace(/"/g, "%22") : "";
-    $("s").innerHTML = '<div class="top"><div><div class="kick">' + esc(data.source || "News") + '</div><div class="ttl">' + esc(TITLE) + '</div></div><div class="clock mono">' + pad(now.getHours()) + ":" + pad(now.getMinutes()) + '</div></div>' +
+    $("s").innerHTML = '<div class="top"><div><div class="kick">' + esc(kicker()) + '</div><div class="ttl">' + esc(TITLE) + '</div></div><div class="clock mono">' + pad(now.getHours()) + ":" + pad(now.getMinutes()) + '</div></div>' +
       '<div class="main"><div class="feat"><div class="img' + (img ? "" : " noimg") + '"' + (img ? ' style="background-image:url(&quot;' + esc(img) + '&quot;)"' : "") + '></div>' +
-      '<div class="h">' + esc(it.title) + '</div>' + (it.desc ? '<div class="d">' + esc(it.desc) + '</div>' : "") + '<div class="m">' + esc(ago(it.date)) + '</div></div>' +
+      '<div class="h">' + esc(it.title) + '</div>' + (it.desc ? '<div class="d">' + esc(it.desc) + '</div>' : "") + '<div class="m">' + esc(meta(it)) + '</div></div>' +
       '<div class="list">' + list + '</div></div><div class="foot">Headline ' + (idx + 1) + " of " + data.items.length + '</div>';
   }
   function show(d) {
     if (!d.items.length) { fail(); return; }
+    d.items = pick(d.items);
+    if (!d.items.length) { fail(GOOD ? "No good news" + (PLACE ? " about " + PLACE : "") + " in the feed right now. Check back later." : "No headlines" + (PLACE ? " about " + PLACE : "") + " right now."); return; }
     data = d; idx = 0; render();
     clearInterval(timer); timer = setInterval(function () { idx = (idx + 1) % data.items.length; render(); }, ROT);
   }
@@ -90,7 +122,7 @@ html,body{margin:0;width:1920px;height:1080px;overflow:hidden;background:#0b1220
     get("https://api.rss2json.com/v1/api.json?rss_url=" + encodeURIComponent(FEED), function (t) {
       try {
         var j = JSON.parse(t), out = [], i;
-        for (i = 0; i < (j.items || []).length && out.length < COUNT; i++) out.push({ title: strip(j.items[i].title), desc: strip(j.items[i].description), date: (j.items[i].pubDate || "").replace(" ", "T") + "Z", img: j.items[i].thumbnail || (j.items[i].enclosure && j.items[i].enclosure.link) || "" });
+        for (i = 0; i < (j.items || []).length && out.length < POOL; i++) out.push({ title: strip(j.items[i].title), desc: strip(j.items[i].description), date: (j.items[i].pubDate || "").replace(" ", "T") + "Z", img: j.items[i].thumbnail || (j.items[i].enclosure && j.items[i].enclosure.link) || "", src: "" });
         show({ source: j.feed && j.feed.title, items: out });
       } catch (e) { fail(); }
     }, fail);

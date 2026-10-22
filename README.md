@@ -28,8 +28,8 @@ Each screen has its own playlist, night hours (dim clock or black), mute and tim
 | App | Options |
 |---|---|
 | `fuel-watch` | `rotateSeconds` |
-| `weather` | `place`, or `lat`+`lon`; `label`; `units` C/F; `wind` mph/kmh (Open-Meteo, no key) |
-| `news` | `feedUrl` (any RSS; default BBC News Manchester), `title`, `count`, `rotateSeconds` |
+| `weather` | `place` + `country` (2-letter code, default GB; blank for anywhere), or `lat`+`lon`; `label`; `units` C/F; `wind` mph/kmh (Open-Meteo, no key) |
+| `news` | `place` (news mentioning a town or area, via Google News) or `feedUrl` (any RSS; default BBC News Manchester); `filter` all/good (good leaves out crime, deaths, crashes, court cases and similar); `title`, `count`, `rotateSeconds` |
 | `traffic` | `title`, `lat`, `lon`, `zoom` (live Waze map) |
 
 An app is one self-contained HTML file; the player writes it into a frame and passes its options as `window.RS_APP`.

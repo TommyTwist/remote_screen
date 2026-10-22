@@ -50,10 +50,11 @@ html,body{margin:0;width:1920px;height:1080px;overflow:hidden;background:#0b1220
 <div id="s"><div id="msg">Loading the weather…</div></div>
 <script>
 /* Screen Hub app: Weather. Data from Open-Meteo (free, no key).
-   Options: place (name, default "Macclesfield"), lat, lon, label, units ("C" or "F"), wind ("mph" or "kmh"). */
+   Options: place (name, default "Macclesfield"), country (2-letter code the place must be in, e.g. "GB";
+   blank for anywhere), lat, lon, label, units ("C" or "F"), wind ("mph" or "kmh"). */
 (function () {
   var O = (window.RS_APP && window.RS_APP.options) || {};
-  var PLACE = O.place || "Macclesfield", F = String(O.units || "C").toUpperCase() === "F", WIND = O.wind === "kmh" ? "kmh" : "mph";
+  var PLACE = O.place || "Macclesfield", COUNTRY = String(O.country == null ? "GB" : O.country).toUpperCase(), F = String(O.units || "C").toUpperCase() === "F", WIND = O.wind === "kmh" ? "kmh" : "mph";
   var DN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], DNL = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
   var MN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   function $(id) { return document.getElementById(id); }
@@ -121,8 +122,10 @@ html,body{margin:0;width:1920px;height:1080px;overflow:hidden;background:#0b1220
       function (w) { try { render(w, name); } catch (e) { fail(); } }, function () { fail(); });
   }
   if (O.lat && O.lon) forecast(Number(O.lat), Number(O.lon), PLACE);
-  else get("https://geocoding-api.open-meteo.com/v1/search?count=1&language=en&name=" + encodeURIComponent(PLACE), function (g) {
-    var r = g && g.results && g.results[0];
+  else get("https://geocoding-api.open-meteo.com/v1/search?count=10&language=en&name=" + encodeURIComponent(PLACE), function (g) {
+    // the search returns the biggest matches first, worldwide; keep to the chosen country
+    var rs = (g && g.results) || [], r = null, i;
+    for (i = 0; i < rs.length && !r; i++) if (!COUNTRY || String(rs[i].country_code).toUpperCase() === COUNTRY) r = rs[i];
     if (!r) { fail("Couldn't find “" + PLACE + "”. Check the place name in the console."); return; }
     forecast(r.latitude, r.longitude, r.name);
   }, function () { fail(); });
